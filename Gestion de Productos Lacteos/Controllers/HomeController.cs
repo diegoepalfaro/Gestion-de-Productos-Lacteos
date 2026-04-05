@@ -1,8 +1,8 @@
 //using Gestion_de_Productos_Lacteos.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
+using System.Collections.Generic;
 
-namespace Gestion_de_Productos_Lacteos.Controllers
+namespace SistemaInventarioLacteos.Controllers
 {
     public class HomeController : Controller
     {
