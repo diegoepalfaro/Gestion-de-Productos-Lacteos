@@ -1,8 +1,49 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+
+    <!-- Bienvenida -->
+    <div class="alert alert-success d-flex justify-content-between align-items-center">
+        <span>
+            👋 Bienvenido, <strong>@ViewBag.Nombre</strong>
+            &nbsp;|&nbsp; Rol: <strong>@ViewBag.Rol</strong>
+        </span>
+        <a href="/Home/Logout" class="btn btn-sm btn-danger">Cerrar sesión</a>
+    </div>
+
+    <!-- Panel de opciones -->
+    <h2 class="mb-4">Panel Principal</h2>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Productos</h5>
+                    <p class="card-text text-muted">Gestión de productos lácteos</p>
+                    <a href="#" class="btn btn-outline-primary btn-sm">Ir</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Inventario</h5>
+                    <p class="card-text text-muted">Control de stock y lotes</p>
+                    <a href="#" class="btn btn-outline-primary btn-sm">Ir</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Ventas</h5>
+                    <p class="card-text text-muted">Registro de ventas y clientes</p>
+                    <a href="#" class="btn btn-outline-primary btn-sm">Ir</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>

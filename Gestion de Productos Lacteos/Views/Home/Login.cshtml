@@ -1,0 +1,73 @@
+﻿@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Gestión de Productos Lácteos</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            width: 100%;
+            max-width: 420px;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 0.6rem;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h3 class="text-center text-primary fw-bold mb-1">
+            Gestión de Productos Lácteos
+        </h3>
+        <p class="text-center text-muted mb-4">Inicia sesión para continuar</p>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger py-2 small">@ViewBag.Error</div>
+        }
+
+        <form asp-controller="Home" asp-action="Login" method="post">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Correo electrónico</label>
+                <input type="email"
+                       name="correo"
+                       class="form-control"
+                       placeholder="ejemplo@correo.com"
+                       autofocus required />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Contraseña</label>
+                <input type="password"
+                       name="contraseña"
+                       class="form-control"
+                       placeholder="Tu contraseña"
+                       required />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-login">
+                Ingresar
+            </button>
+        </form>
+    </div>
+</body>
+</html>

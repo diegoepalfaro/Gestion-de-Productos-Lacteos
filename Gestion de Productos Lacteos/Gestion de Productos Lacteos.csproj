@@ -19,4 +19,9 @@
     <PackageReference Include="MimeKit" Version="4.15.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Views\Inventario\" />
+    <Folder Include="Views\Productos\" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using SistemaInventarioLacteos.Models.Entities;
+﻿using Gestion_de_Productos_Lacteos.Models;
+using Microsoft.AspNetCore.Mvc;
+using SistemaInventarioLacteos.Models;
 using SistemaInventarioLacteos.Models.ViewModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +20,7 @@ namespace SistemaInventarioLacteos.Controllers
                 Descripcion = "Queso fresco pasteurizado",
                 PrecioVenta = 3.50m,
                 PrecioCompra = 2.50m,
-                Activo = true,
-                Inventario = new Inventario { StockActual = 25, StockMinimo = 10 }
+                
             },
             new Producto
             {
@@ -30,8 +30,7 @@ namespace SistemaInventarioLacteos.Controllers
                 Descripcion = "Leche entera 1 litro",
                 PrecioVenta = 1.20m,
                 PrecioCompra = 0.90m,
-                Activo = true,
-                Inventario = new Inventario { StockActual = 50, StockMinimo = 20 }
+                
             },
             new Producto
             {
@@ -41,8 +40,7 @@ namespace SistemaInventarioLacteos.Controllers
                 Descripcion = "Yogur natural 1kg",
                 PrecioVenta = 2.80m,
                 PrecioCompra = 2.00m,
-                Activo = true,
-                Inventario = new Inventario { StockActual = 8, StockMinimo = 15 }
+               
             }
         };
 
@@ -66,14 +64,7 @@ namespace SistemaInventarioLacteos.Controllers
             if (ModelState.IsValid)
             {
                 producto.IdProducto = _productos.Max(p => p.IdProducto) + 1;
-                producto.Activo = true;
-                producto.Inventario = new Inventario
-                {
-                    IdInventario = producto.IdProducto,
-                    IdProducto = producto.IdProducto,
-                    StockActual = 0,
-                    StockMinimo = 10
-                };
+                
                 _productos.Add(producto);
                 TempData["Success"] = "Producto creado exitosamente";
                 return RedirectToAction(nameof(Index));
@@ -126,7 +117,6 @@ namespace SistemaInventarioLacteos.Controllers
             var producto = _productos.FirstOrDefault(p => p.IdProducto == id);
             if (producto != null)
             {
-                producto.Activo = false;
                 TempData["Success"] = "Producto eliminado exitosamente";
             }
             return RedirectToAction(nameof(Index));

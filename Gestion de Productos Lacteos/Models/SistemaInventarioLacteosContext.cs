@@ -23,7 +23,7 @@ public partial class SistemaInventarioLacteosContext : DbContext
 
     public virtual DbSet<DetalleCompra> DetalleCompras { get; set; }
 
-    public virtual DbSet<DetalleVentum> DetalleVenta { get; set; }
+    public virtual DbSet<DetalleVenta> DetalleVenta { get; set; }
 
     public virtual DbSet<Inventario> Inventarios { get; set; }
 
@@ -39,7 +39,8 @@ public partial class SistemaInventarioLacteosContext : DbContext
 
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
-    public virtual DbSet<Ventum> Venta { get; set; }
+    
+    public virtual DbSet<Venta> Venta { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -161,7 +162,7 @@ public partial class SistemaInventarioLacteosContext : DbContext
                 .HasConstraintName("FK__DetalleCo__idPro__59063A47");
         });
 
-        modelBuilder.Entity<DetalleVentum>(entity =>
+        modelBuilder.Entity<DetalleVenta>(entity =>
         {
             entity.HasKey(e => e.IdDetalleVenta).HasName("PK__DetalleV__BFE2843FC3DA1E12");
 
@@ -353,7 +354,7 @@ public partial class SistemaInventarioLacteosContext : DbContext
                 .HasConstraintName("FK__Usuario__idRol__3B75D760");
         });
 
-        modelBuilder.Entity<Ventum>(entity =>
+        modelBuilder.Entity<Venta>(entity =>
         {
             entity.HasKey(e => e.IdVenta).HasName("PK__Venta__077D5614ADCB3D6A");
 
@@ -372,13 +373,7 @@ public partial class SistemaInventarioLacteosContext : DbContext
                 .HasColumnType("decimal(10, 2)")
                 .HasColumnName("total");
 
-            entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.Venta)
-                .HasForeignKey(d => d.IdCliente)
-                .HasConstraintName("FK__Venta__idCliente__4BAC3F29");
-
-            entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.Venta)
-                .HasForeignKey(d => d.IdUsuario)
-                .HasConstraintName("FK__Venta__idUsuario__4CA06362");
+        
         });
 
         OnModelCreatingPartial(modelBuilder);
