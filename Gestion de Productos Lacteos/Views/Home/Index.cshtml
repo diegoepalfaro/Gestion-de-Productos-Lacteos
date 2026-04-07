@@ -4,46 +4,97 @@
 
 <div class="container mt-4">
 
-    <!-- Bienvenida -->
     <div class="alert alert-success d-flex justify-content-between align-items-center">
         <span>
             👋 Bienvenido, <strong>@ViewBag.Nombre</strong>
             &nbsp;|&nbsp; Rol: <strong>@ViewBag.Rol</strong>
         </span>
-        <a href="/Home/Logout" class="btn btn-sm btn-danger">Cerrar sesión</a>
+        <a href="/Home/Logout" class="btn btn-sm btn-danger">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </a>
     </div>
 
-    <!-- Panel de opciones -->
     <h2 class="mb-4">Panel Principal</h2>
 
     <div class="row g-3">
+
+        <!-- Panel Administración -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body text-center">
+                    <div class="fs-1 mb-2">📊</div>
+                    <h5 class="card-title text-primary">Panel de Administración</h5>
+                    <p class="card-text text-muted">Métricas, ventas y alertas del sistema</p>
+                    <a asp-action="Dashboard" asp-controller="Home"
+                       class="btn btn-primary btn-sm">Ver Panel</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos -->
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body text-center">
+                    <div class="fs-1 mb-2">📦</div>
                     <h5 class="card-title">Productos</h5>
                     <p class="card-text text-muted">Gestión de productos lácteos</p>
-                    <a href="#" class="btn btn-outline-primary btn-sm">Ir</a>
+                    <a asp-controller="Productos" asp-action="Index"
+                       class="btn btn-outline-primary btn-sm">Ir</a>
                 </div>
             </div>
         </div>
+
+        <!-- Inventario -->
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body text-center">
+                    <div class="fs-1 mb-2">🏭</div>
                     <h5 class="card-title">Inventario</h5>
                     <p class="card-text text-muted">Control de stock y lotes</p>
-                    <a href="#" class="btn btn-outline-primary btn-sm">Ir</a>
+                    <a asp-controller="Inventario" asp-action="Index"
+                       class="btn btn-outline-primary btn-sm">Ir</a>
                 </div>
             </div>
         </div>
+
+        <!-- Ventas -->
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body text-center">
+                    <div class="fs-1 mb-2">🛒</div>
                     <h5 class="card-title">Ventas</h5>
                     <p class="card-text text-muted">Registro de ventas y clientes</p>
-                    <a href="#" class="btn btn-outline-primary btn-sm">Ir</a>
+                    <a asp-controller="Ventas" asp-action="Index"
+                       class="btn btn-outline-primary btn-sm">Ir</a>
                 </div>
             </div>
         </div>
-    </div>
 
+        <!-- Proveedores -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="fs-1 mb-2">🚚</div>
+                    <h5 class="card-title">Proveedores</h5>
+                    <p class="card-text text-muted">Gestión de proveedores</p>
+                    <a asp-controller="Proveedores" asp-action="Index"
+                       class="btn btn-outline-primary btn-sm">Ir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clientes -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="fs-1 mb-2">👥</div>
+                    <h5 class="card-title">Clientes</h5>
+                    <p class="card-text text-muted">Gestión de clientes</p>
+                    <a asp-controller="Clientes" asp-action="Index"
+                       class="btn btn-outline-primary btn-sm">Ir</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
