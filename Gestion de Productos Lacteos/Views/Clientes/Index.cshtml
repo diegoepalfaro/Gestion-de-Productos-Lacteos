@@ -1,0 +1,235 @@
+﻿@model IEnumerable<Gestion_de_Productos_Lacteos.Models.Cliente>
+
+@{
+    ViewData["Title"] = "Directorio de Clientes";
+}
+
+<style>
+    .double-border-blue {
+        border: 5px double #0d6efd !important;
+        border-radius: 15px;
+        background-color: #ffffff;
+    }
+    .filter-panel { background-color: #f8f9fa; padding: 20px; }
+    .form-control-sm:focus, .form-select-sm:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    }
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-0 fw-bold">
+                <i class="fas fa-users text-primary me-2"></i>Gestión de Clientes
+            </h4>
+            <small class="text-muted">Administración de cartera de clientes y contribuyentes</small>
+        </div>
+        <button onclick="abrirModal(0)" class="btn btn-primary shadow-sm">
+            <i class="fas fa-user-plus me-1"></i> Nuevo Cliente
+        </button>
+    </div>
+
+    <div class="card double-border-blue shadow-sm mb-4">
+        <div class="card-body filter-panel">
+            <form id="formFiltros" method="get" asp-action="Index" class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-search me-1"></i> Buscar cliente</label>
+                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm"
+                           placeholder="Nombre, DUI o NIT..." value="@ViewBag.BuscarActual">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-filter me-1"></i> Tipo</label>
+                    <select name="tipo" id="tipo" class="form-select form-select-sm">
+                        <option value="">-- Todos --</option>
+                        <option value="Final" selected="@(ViewBag.TipoActual == "Final")">Consumidor Final</option>
+                        <option value="Fiscal" selected="@(ViewBag.TipoActual == "Fiscal")">Crédito Fiscal</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100"><i class="fas fa-eraser"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small uppercase text-center">
+                        <tr>
+                            <th class="ps-4 text-start">Nombre Cliente</th>
+                            <th>Contacto</th>
+                            <th>Identificación</th>
+                            <th>Tipo</th>
+                            <th class="pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 text-start">
+                                    <div class="fw-bold">@item.Nombre</div>
+                                    <small class="text-muted">@item.Correo</small>
+                                </td>
+                                <td class="text-center">
+                                    <div><i class="fas fa-phone-alt me-1 small"></i>@item.Telefono</div>
+                                </td>
+                                <td class="text-center small">
+                                    @if (!string.IsNullOrEmpty(item.Dui))
+                                    {
+                                        <div>DUI: @item.Dui</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.Nit))
+                                    {
+                                        <div>NIT: @item.Nit</div>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @(item.TipoCliente == "Fiscal" ? "bg-info" : "bg-light text-dark border")">
+                                        @item.TipoCliente
+                                    </span>
+                                </td>
+                                <td class="text-center pe-4">
+                                    <button onclick="abrirModal(@item.IdCliente)" class="btn btn-sm btn-outline-warning border-0"><i class="fas fa-edit"></i></button>
+                                    <button onclick="eliminarCliente(@item.IdCliente)" class="btn btn-sm btn-outline-danger border-0"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content double-border-blue">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary" id="tituloModal">
+                    <i class="fas fa-user-circle me-2"></i><span>Nuevo Cliente</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formCliente">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="IdCliente" name="IdCliente" value="0" />
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label small fw-bold">Nombre Completo / Razón Social</label>
+                            <input type="text" name="Nombre" id="Nombre" class="form-control" required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-bold">Tipo de Cliente</label>
+                            <select name="TipoCliente" id="TipoCliente" class="form-select" required>
+                                <option value="Final">Consumidor Final</option>
+                                <option value="Fiscal">Crédito Fiscal</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Teléfono</label>
+                            <input type="text" name="Telefono" id="Telefono" class="form-control" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Correo Electrónico</label>
+                            <input type="email" name="Correo" id="Correo" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-bold">DUI</label>
+                            <input type="text" name="Dui" id="Dui" class="form-control" placeholder="00000000-0" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-bold">NIT</label>
+                            <input type="text" name="Nit" id="Nit" class="form-control" placeholder="0000-000000-000-0" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small fw-bold">NRC</label>
+                            <input type="text" name="Nrc" id="Nrc" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Dirección</label>
+                        <textarea name="Direccion" id="Direccion" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="button" onclick="guardarCliente()" class="btn btn-primary fw-bold shadow-sm">
+                            <i class="fas fa-save me-2"></i>Guardar Cliente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Búsqueda Activa
+        const formFiltros = document.getElementById('formFiltros');
+        formFiltros.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+                clearTimeout(this.delay);
+                this.delay = setTimeout(() => formFiltros.submit(), 400);
+            });
+        });
+
+        const modalCli = new bootstrap.Modal(document.getElementById('modalCliente'));
+
+        function abrirModal(id) {
+            document.getElementById('formCliente').reset();
+            document.getElementById('IdCliente').value = id;
+            if (id === 0) {
+                document.getElementById('tituloModal').querySelector('span').innerText = "Nuevo Cliente";
+                modalCli.show();
+            } else {
+                document.getElementById('tituloModal').querySelector('span').innerText = "Editar Cliente";
+                fetch(`/Clientes/GetCliente/${id}`).then(res => res.json()).then(data => {
+                    document.getElementById('Nombre').value = data.nombre;
+                    document.getElementById('TipoCliente').value = data.tipoCliente;
+                    document.getElementById('Telefono').value = data.telefono;
+                    document.getElementById('Correo').value = data.correo;
+                    document.getElementById('Dui').value = data.dui;
+                    document.getElementById('Nit').value = data.nit;
+                    document.getElementById('Nrc').value = data.nrc;
+                    document.getElementById('Direccion').value = data.direccion;
+                    modalCli.show();
+                });
+            }
+        }
+
+        function guardarCliente() {
+            const form = document.getElementById('formCliente');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            fetch('/Clientes/Save', { method: 'POST', body: new FormData(form) })
+            .then(res => res.json()).then(data => { if (data.success) location.reload(); });
+        }
+
+        function eliminarCliente(id) {
+            Swal.fire({
+                title: '¿Eliminar cliente?',
+                text: "Esta acción no se puede deshacer.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, eliminar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post(`/Clientes/Delete/${id}`, () => location.reload());
+                }
+            });
+        }
+    </script>
+}

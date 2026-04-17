@@ -1,0 +1,183 @@
+﻿@model IEnumerable<Gestion_de_Productos_Lacteos.Models.Proveedor>
+
+@{
+    ViewData["Title"] = "Proveedores";
+}
+
+<style>
+    .double-border-blue {
+        border: 5px double #0d6efd !important;
+        border-radius: 15px;
+        background-color: #ffffff;
+    }
+    .filter-panel { background-color: #f8f9fa; padding: 20px; }
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-0 fw-bold">
+                <i class="fas fa-truck text-primary me-2"></i>Gestión de Proveedores
+            </h4>
+            <small class="text-muted">Directorio de abastecimiento de materia prima</small>
+        </div>
+        <button onclick="abrirModal(0)" class="btn btn-primary shadow-sm">
+            <i class="fas fa-plus-circle me-1"></i> Nuevo Proveedor
+        </button>
+    </div>
+
+    <div class="card double-border-blue shadow-sm mb-4">
+        <div class="card-body filter-panel">
+            <form id="formFiltros" method="get" asp-action="Index" class="row g-3 align-items-end">
+                <div class="col-md-11">
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-search me-1"></i> Buscar proveedor</label>
+                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm"
+                           placeholder="Nombre o teléfono..." value="@ViewBag.BuscarActual">
+                </div>
+                <div class="col-md-1">
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100"><i class="fas fa-eraser"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center">
+                    <thead class="table-light text-muted small uppercase">
+                        <tr>
+                            <th class="ps-4 text-start">Proveedor</th>
+                            <th>Teléfono</th>
+                            <th>Correo</th>
+                            <th>Dirección</th>
+                            <th class="pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 text-start fw-bold">@item.NombreProveedor</td>
+                                <td>@item.Telefono</td>
+                                <td class="small">@item.Correo</td>
+                                <td class="small text-truncate" style="max-width: 200px;">@item.Direccion</td>
+                                <td class="pe-4">
+                                    <button onclick="abrirModal(@item.IdProveedor)" class="btn btn-sm btn-outline-warning border-0"><i class="fas fa-edit"></i></button>
+                                    <button onclick="eliminarProveedor(@item.IdProveedor)" class="btn btn-sm btn-outline-danger border-0"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalProveedor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content double-border-blue">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary" id="tituloModal">
+                    <i class="fas fa-truck me-2"></i><span>Nuevo Proveedor</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formProveedor">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="IdProveedor" name="IdProveedor" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del Proveedor / Empresa</label>
+                        <input type="text" name="NombreProveedor" id="NombreProveedor" class="form-control" required />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Teléfono (Solo números)</label>
+                            <input type="text" name="Telefono" id="Telefono" class="form-control only-numbers"
+                                   placeholder="Ej: 77778888" maxlength="12" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Correo Electrónico</label>
+                            <input type="email" name="Correo" id="Correo" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Dirección</label>
+                        <textarea name="Direccion" id="Direccion" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="button" onclick="guardarProveedor()" class="btn btn-primary fw-bold shadow-sm">
+                            <i class="fas fa-save me-2"></i>Guardar Proveedor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // --- VALIDACIÓN DE SOLO NÚMEROS ---
+        document.querySelectorAll('.only-numbers').forEach(input => {
+            input.addEventListener('input', function() {
+                // Reemplaza cualquier cosa que NO sea un número por vacío
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        });
+
+        // Búsqueda Activa
+        const formFiltros = document.getElementById('formFiltros');
+        formFiltros.querySelector('input').addEventListener('input', () => {
+            clearTimeout(this.delay);
+            this.delay = setTimeout(() => formFiltros.submit(), 400);
+        });
+
+        const modalProv = new bootstrap.Modal(document.getElementById('modalProveedor'));
+
+        function abrirModal(id) {
+            document.getElementById('formProveedor').reset();
+            document.getElementById('IdProveedor').value = id;
+            if (id === 0) {
+                document.getElementById('tituloModal').querySelector('span').innerText = "Nuevo Proveedor";
+                modalProv.show();
+            } else {
+                document.getElementById('tituloModal').querySelector('span').innerText = "Editar Proveedor";
+                fetch(`/Proveedores/GetProveedor/${id}`).then(res => res.json()).then(data => {
+                    document.getElementById('NombreProveedor').value = data.nombreProveedor;
+                    document.getElementById('Telefono').value = data.telefono;
+                    document.getElementById('Correo').value = data.correo;
+                    document.getElementById('Direccion').value = data.direccion;
+                    modalProv.show();
+                });
+            }
+        }
+
+        function guardarProveedor() {
+            const form = document.getElementById('formProveedor');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            fetch('/Proveedores/Save', { method: 'POST', body: new FormData(form) })
+            .then(res => res.json()).then(data => { if (data.success) location.reload(); });
+        }
+
+        function eliminarProveedor(id) {
+            Swal.fire({
+                title: '¿Eliminar proveedor?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, eliminar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post(`/Proveedores/Delete/${id}`, () => location.reload());
+                }
+            });
+        }
+    </script>
+}
