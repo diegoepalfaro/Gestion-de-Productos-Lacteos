@@ -1,0 +1,43 @@
+﻿@model Gestion_de_Productos_Lacteos.Models.Lote
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary bg-opacity-10 border-0 py-3">
+                <h6 class="mb-0 fw-bold text-primary"><i class="fas fa-plus me-2"></i>Registrar Nuevo Lote</h6>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Create">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Producto</label>
+                        <select asp-for="IdProducto" class="form-select" asp-items="ViewBag.IdProducto">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Número de Lote</label>
+                        <input asp-for="NumeroLote" class="form-control" placeholder="Ej: LOTE-001" />
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label fw-bold small">Fecha Producción</label>
+                            <input asp-for="FechaProduccion" type="date" class="form-control" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-bold small">Fecha Vencimiento</label>
+                            <input asp-for="FechaVencimiento" type="date" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Cantidad inicial</label>
+                        <input asp-for="Cantidad" type="number" class="form-control" />
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100">Guardar Lote</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary w-100">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

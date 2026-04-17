@@ -1,3 +1,4 @@
+using Gestion_de_Productos_Lacteos.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 //using Gestion_de_Productos_Lacteos.Services;
@@ -14,13 +15,12 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-/*builder.Services.AddDbContext<GestionProductosLacteosDbContext>(opt =>
-    opt.UseSqlServer(
-            builder.Configuration.GetConnectionString("GestionProductosLacteosDbConnection")
-        )
-
+builder.Services.AddDbContext<SistemaInventarioLacteosContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
 );
-*/
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

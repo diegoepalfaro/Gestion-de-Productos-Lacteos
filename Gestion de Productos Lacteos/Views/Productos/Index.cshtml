@@ -1,0 +1,335 @@
+@model IEnumerable<Gestion_de_Productos_Lacteos.Models.Producto>
+
+@{
+    ViewData["Title"] = "Inventario de Productos";
+}
+
+<style>
+    /* Diseño de doble borde azul para Buscador y Modales */
+    .double-border-blue {
+        border: 5px double #0d6efd !important;
+        border-radius: 15px;
+        background-color: #ffffff;
+    }
+
+    .filter-panel {
+        background-color: #f8f9fa;
+        padding: 20px;
+    }
+
+    .form-control-sm:focus, .form-select-sm:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    }
+
+    /* Estilo para los enlaces de nombre de producto */
+    .product-link {
+        color: #0d6efd;
+        font-weight: 700;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+        .product-link:hover {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-0 fw-bold">
+                <i class="fas fa-boxes text-primary me-2"></i>Inventario de Productos
+            </h4>
+            <small class="text-muted">Gestión de catálogo y existencias totales</small>
+        </div>
+        <button onclick="abrirModalProducto(0)" class="btn btn-primary shadow-sm">
+            <i class="fas fa-plus-circle me-1"></i> Nuevo Producto
+        </button>
+    </div>
+
+    <div class="card double-border-blue shadow-sm mb-4">
+        <div class="card-body filter-panel">
+            <form id="formFiltros" method="get" asp-action="Index" class="row g-3 align-items-end">
+                <div class="col-md-7">
+                    <label class="form-label small fw-bold text-primary">
+                        <i class="fas fa-search me-1"></i> Buscar producto
+                    </label>
+                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm"
+                           placeholder="Escribe el nombre del producto..." value="@ViewBag.BuscarActual">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-primary">
+                        <i class="fas fa-tag me-1"></i> Categoría
+                    </label>
+                    <select name="idCategoria" id="idCategoria" class="form-select form-select-sm">
+                        <option value="">-- Todas las categorías --</option>
+                        @foreach (var cat in (List<Gestion_de_Productos_Lacteos.Models.Categoria>)ViewBag.Categorias)
+
+                        {
+                            <option value="@cat.IdCategoria" selected="@(ViewBag.CategoriaActual?.ToString() == cat.IdCategoria.ToString())">
+                                @cat.NombreCategoria
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar filtros">
+                        <i class="fas fa-eraser"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center">
+                    <thead class="table-light text-muted small uppercase">
+                        <tr>
+                            <th class="ps-4 text-start">Producto</th>
+                            <th>Categoría</th>
+                            <th>Stock Total</th>
+                            <th>P. Venta</th>
+                            <th class="pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No se encontraron productos.</td></tr>
+                        }
+                        @foreach (var p in Model)
+                        {
+
+                            var stock = p.Lotes.Sum(l => l.Cantidad) ?? 0;
+                            <tr>
+                                <td class="ps-4 text-start">
+                                    <a href="javascript:void(0)" class="product-link"
+                                       onclick="verLotes(@p.IdProducto, '@p.NombreProducto')">
+                                        @p.NombreProducto
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        @(p.CategoriaNavigation?.NombreCategoria ?? "Sin Categoría")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @(stock > 10 ? "bg-success" : "bg-danger")">
+                                        @stock unidades
+                                    </span>
+                                </td>
+                                <td class="fw-bold">$@p.PrecioVenta?.ToString("N2")</td>
+                                <td class="pe-4">
+                                    <button onclick="abrirModalProducto(@p.IdProducto)" class="btn btn-sm btn-outline-warning border-0" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    @* Botón eliminar temporalmente removido *@
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content double-border-blue">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary" id="tituloModalProducto">
+                    <i class="fas fa-box me-2"></i><span>Nuevo Producto</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formProducto">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="IdProducto" name="IdProducto" value="0" />
+
+                    <div class="row">
+                        <div class="col-md-7 mb-3">
+                            <label class="form-label small fw-bold">Nombre del Producto</label>
+                            <input type="text" id="NombreProducto" name="NombreProducto" class="form-control" required />
+                        </div>
+                        <div class="col-md-5 mb-3">
+                            <label class="form-label small fw-bold">Categoría</label>
+                            <select id="IdCategoriaModal" name="IdCategoria" class="form-select" asp-items="ViewBag.IdCategoria">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Descripción</label>
+                        <textarea id="Descripcion" name="Descripcion" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Precio Compra</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">$</span>
+                                <input type="number" step="0.01" id="PrecioCompra" name="PrecioCompra" class="form-control" oninput="calcularMargen()" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Precio Venta</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">$</span>
+                                <input type="number" step="0.01" id="PrecioVenta" name="PrecioVenta" class="form-control" oninput="calcularMargen()" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="margen-info" class="alert alert-info py-2 small d-none mb-4">
+                        <i class="fas fa-info-circle me-1"></i> Margen estimado: <strong id="margen-valor"></strong>
+                    </div>
+
+                    <div class="d-grid mt-2">
+                        <button type="button" onclick="guardarProducto()" class="btn btn-primary fw-bold shadow-sm py-2">
+                            <i class="fas fa-save me-2"></i>Guardar Producto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalVerLotes" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content double-border-blue">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary">
+                    <i class="fas fa-layer-group me-2"></i>Lotes: <span id="nombreProdModal"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr class="text-muted small">
+                            <th>N° LOTE</th>
+                            <th class="text-center">CANTIDAD</th>
+                            <th>VENCIMIENTO</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaLotesCuerpo"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // --- Búsqueda Activa Automática ---
+        const formFiltros = document.getElementById('formFiltros');
+        formFiltros.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+                clearTimeout(this.delay);
+                this.delay = setTimeout(() => formFiltros.submit(), 400);
+            });
+        });
+
+        // --- Lógica del Modal de Producto ---
+        const modalProd = new bootstrap.Modal(document.getElementById('modalProducto'));
+
+        function abrirModalProducto(id) {
+            document.getElementById('formProducto').reset();
+            document.getElementById('IdProducto').value = id;
+            document.getElementById('margen-info').classList.add('d-none');
+
+            if (id === 0) {
+                document.getElementById('tituloModalProducto').querySelector('span').innerText = "Nuevo Producto";
+                modalProd.show();
+            } else {
+                document.getElementById('tituloModalProducto').querySelector('span').innerText = "Editar Producto";
+                fetch(`/Productos/GetProducto/${id}`).then(res => res.json()).then(data => {
+                    document.getElementById('NombreProducto').value = data.nombreProducto;
+                    document.getElementById('IdCategoriaModal').value = data.idCategoria;
+                    document.getElementById('Descripcion').value = data.descripcion;
+                    document.getElementById('PrecioCompra').value = data.precioCompra;
+                    document.getElementById('PrecioVenta').value = data.precioVenta;
+                    calcularMargen();
+                    modalProd.show();
+                });
+            }
+        }
+
+        function guardarProducto() {
+            const form = document.getElementById('formProducto');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            const formData = new FormData(form);
+            fetch('/Productos/Save', { method: 'POST', body: formData })
+                .then(res => res.json()).then(data => {
+                    if (data.success) location.reload();
+                    else Swal.fire('Error', data.message, 'error');
+                });
+        }
+
+        function calcularMargen() {
+            const c = parseFloat(document.getElementById('PrecioCompra').value) || 0;
+            const v = parseFloat(document.getElementById('PrecioVenta').value) || 0;
+            const info = document.getElementById('margen-info');
+            const val = document.getElementById('margen-valor');
+
+            if (c > 0 && v > 0) {
+                const margen = ((v - c) / c * 100).toFixed(1);
+                val.textContent = `${margen}% (+$${(v - c).toFixed(2)})`;
+                info.classList.remove('d-none');
+                info.className = `alert py-2 small ${margen >= 0 ? 'alert-info' : 'alert-warning'}`;
+            } else {
+                info.classList.add('d-none');
+            }
+        }
+
+        // --- Lógica para Ver Lotes ---
+        const modalLotes = new bootstrap.Modal(document.getElementById('modalVerLotes'));
+
+        function verLotes(id, nombre) {
+            document.getElementById('nombreProdModal').innerText = nombre;
+            const cuerpo = document.getElementById('tablaLotesCuerpo');
+            cuerpo.innerHTML = '<tr><td colspan="4" class="text-center py-3">Cargando...</td></tr>';
+            modalLotes.show();
+
+            fetch(`/Productos/GetLotes/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    cuerpo.innerHTML = '';
+                    if (data.length === 0) {
+                        cuerpo.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">No hay lotes disponibles</td></tr>';
+                        return;
+                    }
+                    data.forEach(l => {
+                        let badgeClass = "bg-success";
+                        let statusText = `Faltan ${l.diasRestantes} días`;
+
+                        if (l.diasRestantes <= 0) {
+                            badgeClass = "bg-dark"; statusText = "VENCIDO";
+                        } else if (l.diasRestantes <= 7) {
+                            badgeClass = "bg-danger";
+                        } else if (l.diasRestantes <= 15) {
+                            badgeClass = "bg-warning text-dark";
+                        }
+
+                        cuerpo.innerHTML += `
+                                    <tr>
+                                        <td class="fw-bold text-primary">${l.numeroLote}</td>
+                                        <td class="text-center fw-bold">${l.cantidad}</td>
+                                        <td>${l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString() : 'N/A'}</td>
+                                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                                    </tr>`;
+                    });
+                });
+        }
+    </script>
+}

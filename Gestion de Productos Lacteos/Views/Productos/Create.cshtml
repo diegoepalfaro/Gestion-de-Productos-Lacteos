@@ -1,0 +1,111 @@
+@model Gestion_de_Productos_Lacteos.Models.Producto
+
+@{
+    ViewData["Title"] = "Nuevo Producto";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold">
+            <i class="fas fa-plus-circle text-primary"></i> Nuevo Producto
+        </h4>
+        <small class="text-muted">Completa los campos para registrar un producto</small>
+    </div>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Volver a la lista
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary bg-opacity-10 border-0">
+                <h6 class="mb-0">
+                    <i class="fas fa-box text-primary"></i> Información del producto
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="NombreProducto" class="form-label fw-semibold">
+                            Nombre del producto <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="NombreProducto" class="form-control" placeholder="Ej: Queso Fresco 500g" autofocus />
+                        <span asp-validation-for="NombreProducto" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="IdCategoria" class="form-label fw-semibold">Categoría</label>
+                        <select asp-for="IdCategoria" class="form-select" asp-items="ViewBag.IdCategoria">
+                            <option value="">-- Seleccione una Categoría --</option>
+                        </select>
+                        <span asp-validation-for="IdCategoria" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Descripcion" class="form-label fw-semibold">Descripción</label>
+                        <textarea asp-for="Descripcion" class="form-control" rows="3" placeholder="Descripción breve del producto..."></textarea>
+                        <span asp-validation-for="Descripcion" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label asp-for="PrecioCompra" class="form-label fw-semibold">Precio de compra</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="PrecioCompra" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
+                            </div>
+                            <span asp-validation-for="PrecioCompra" class="text-danger small"></span>
+                        </div>
+                        <div class="col-6">
+                            <label asp-for="PrecioVenta" class="form-label fw-semibold">Precio de venta</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="PrecioVenta" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
+                            </div>
+                            <span asp-validation-for="PrecioVenta" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div id="margen-info" class="alert alert-info py-2 small d-none mb-4">
+                        <i class="fas fa-info-circle"></i> Margen de ganancia: <strong id="margen-valor"></strong>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Guardar producto
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        const compra = document.getElementById('PrecioCompra');
+        const venta  = document.getElementById('PrecioVenta');
+        const info   = document.getElementById('margen-info');
+        const val    = document.getElementById('margen-valor');
+
+        function calcularMargen() {
+            const c = parseFloat(compra.value);
+            const v = parseFloat(venta.value);
+            if (c > 0 && v > 0) {
+                const margen = ((v - c) / c * 100).toFixed(1);
+                val.textContent = margen + '% (+$' + (v - c).toFixed(2) + ')';
+                info.classList.remove('d-none');
+                info.className = `alert py-2 small ${margen >= 0 ? 'alert-info' : 'alert-warning'}`;
+            } else {
+                info.classList.add('d-none');
+            }
+        }
+        compra.addEventListener('input', calcularMargen);
+        venta.addEventListener('input', calcularMargen);
+    </script>
+}

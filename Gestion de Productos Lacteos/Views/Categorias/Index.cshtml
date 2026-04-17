@@ -1,0 +1,149 @@
+﻿@model IEnumerable<Gestion_de_Productos_Lacteos.Models.Categoria>
+
+@{
+    ViewData["Title"] = "Categorías";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold">
+            <i class="fas fa-tags text-primary"></i> Categorías
+        </h4>
+        <small class="text-muted">Organización de productos lácteos</small>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalCrear()">
+        <i class="fas fa-plus-circle"></i> Nueva Categoría
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th class="text-center pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted small">@item.IdCategoria</td>
+                            <td class="fw-semibold">@item.NombreCategoria</td>
+                            <td class="text-muted small">@(item.Descripcion ?? "—")</td>
+                            <td class="text-center pe-4">
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="abrirModalEditar(@item.IdCategoria)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="confirmarEliminar(@item.IdCategoria, '@item.NombreCategoria')">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="modalTitulo">Nueva Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formCategoria">
+                <div class="modal-body">
+                    <input type="hidden" id="IdCategoria" name="IdCategoria" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre de Categoría</label>
+                        <input type="text" class="form-control" id="NombreCategoria" name="NombreCategoria" required maxlength="50" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción</label>
+                        <textarea class="form-control" id="Descripcion" name="Descripcion" rows="3" maxlength="255"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const modalElement = document.getElementById('modalCategoria');
+        const modal = new bootstrap.Modal(modalElement);
+        const form = document.getElementById('formCategoria');
+
+        function abrirModalCrear() {
+            form.reset();
+            document.getElementById('IdCategoria').value = "";
+            document.getElementById('modalTitulo').innerText = "Nueva Categoría";
+            modal.show();
+        }
+
+        function abrirModalEditar(id) {
+            fetch(`/Categorias/GetCategoria/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('IdCategoria').value = data.idCategoria;
+                    document.getElementById('NombreCategoria').value = data.nombreCategoria;
+                    document.getElementById('Descripcion').value = data.descripcion;
+                    document.getElementById('modalTitulo').innerText = "Editar Categoría";
+                    modal.show();
+                });
+        }
+
+        form.onsubmit = function (e) {
+            e.preventDefault();
+            const id = document.getElementById('IdCategoria').value;
+            const url = id ? '/Categorias/Edit' : '/Categorias/Create';
+
+            const formData = new FormData(form);
+
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            });
+        };
+
+        function confirmarEliminar(id, nombre) {
+            Swal.fire({
+                title: '¿Eliminar categoría?',
+                text: `Se eliminará "${nombre}". Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post(`/Categorias/Delete/${id}`, function (res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire('Atención', res.message, 'warning');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

@@ -18,7 +18,7 @@ namespace Gestion_de_Productos_Lacteos.Controllers
         public IActionResult Login()
         {
             if (HttpContext.Session.GetString("UsuarioNombre") != null)
-                return RedirectToAction("Index");
+                return RedirectToAction("Dashboard");
             return View();
         }
 
@@ -53,7 +53,7 @@ namespace Gestion_de_Productos_Lacteos.Controllers
                 HttpContext.Session.SetString("UsuarioNombre", reader.GetString(1));
                 HttpContext.Session.SetString("UsuarioAlias", reader.GetString(2));
                 HttpContext.Session.SetString("UsuarioRol", reader.GetString(3));
-                return RedirectToAction("Index");
+                return RedirectToAction("Dashboard");
             }
 
             ViewBag.Error = "Correo o contraseña incorrectos";

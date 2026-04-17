@@ -1,21 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Gestion_de_Productos_Lacteos.Models;
 
 public partial class Producto
 {
+    [Key]
     public int IdProducto { get; set; }
 
+    [Required]
     public string NombreProducto { get; set; } = null!;
 
-    public string? Categoria { get; set; }
+    // Mapeo explícito a la nueva columna
+    [Column("idCategoria")]
+    public int? IdCategoria { get; set; }
 
     public string? Descripcion { get; set; }
 
     public decimal? PrecioCompra { get; set; }
 
     public decimal? PrecioVenta { get; set; }
+
+    [ForeignKey("IdCategoria")]
+    public virtual Categoria? CategoriaNavigation { get; set; }
 
     public virtual ICollection<DetalleCompra> DetalleCompras { get; set; } = new List<DetalleCompra>();
 

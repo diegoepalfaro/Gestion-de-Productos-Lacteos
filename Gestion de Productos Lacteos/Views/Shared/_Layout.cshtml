@@ -92,7 +92,7 @@
                     <!-- Menú principal -->
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Dashboard">
                                 <i class="fas fa-home"></i> Inicio
                             </a>
                         </li>
@@ -115,7 +115,7 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" asp-controller="Productos" asp-action="Categorias">
+                                    <a class="dropdown-item" asp-controller="Categorias" asp-action="Index">
                                         <i class="fas fa-tags"></i> Categorías
                                     </a>
                                 </li>
@@ -157,6 +157,13 @@
                                         @ViewBag.StockBajoCount
                                     </span>
                                 }
+                            </a>
+                        </li>
+
+                        <!-- Lotes -->
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Lotes" asp-action="Index">
+                                <i class="fas fa-layer-group"></i> Lotes
                             </a>
                         </li>
 

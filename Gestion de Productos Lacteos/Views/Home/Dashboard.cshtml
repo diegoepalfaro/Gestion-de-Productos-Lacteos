@@ -4,35 +4,32 @@
 
 <div class="container-fluid px-4 py-3">
 
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-0 fw-bold">
-                <i class="fas fa-chart-line text-primary"></i>
+                <i class="fas fa-th-large text-primary me-2"></i>
                 Panel de Administración
             </h4>
-            <small class="text-muted">
+            <small class="text-muted text-capitalize">
+                <i class="far fa-calendar-alt me-1"></i>
                 @DateTime.Now.ToString("dddd, dd 'de' MMMM yyyy",
                          new System.Globalization.CultureInfo("es-ES"))
             </small>
         </div>
-        <a asp-action="Index" asp-controller="Home"
-           class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Volver al inicio
-        </a>
     </div>
 
-    <!-- MÉTRICAS -->
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-success bg-opacity-10 p-3 fs-3">💰</div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 text-success">
+                        <i class="fas fa-dollar-sign fs-4"></i>
+                    </div>
                     <div>
                         <div class="text-muted small">Ventas de hoy</div>
                         <div class="fw-bold fs-5">$@String.Format("{0:N2}", ViewBag.VentasHoy)</div>
                         <div class="text-muted" style="font-size:0.78rem">
-                            @ViewBag.NumVentasHoy transacciones
+                            <i class="fas fa-receipt me-1"></i> @ViewBag.NumVentasHoy transacciones
                         </div>
                     </div>
                 </div>
@@ -41,10 +38,15 @@
         <div class="col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 fs-3">📅</div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 text-primary">
+                        <i class="fas fa-calendar-check fs-4"></i>
+                    </div>
                     <div>
                         <div class="text-muted small">Ventas del mes</div>
                         <div class="fw-bold fs-5">$@String.Format("{0:N2}", ViewBag.VentasMes)</div>
+                        <div class="text-muted" style="font-size:0.78rem text-primary">
+                            <i class="fas fa-chart-bar me-1"></i> Rendimiento mensual
+                        </div>
                     </div>
                 </div>
             </div>
@@ -52,7 +54,9 @@
         <div class="col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 fs-3">⚠️</div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning">
+                        <i class="fas fa-hourglass-half fs-4"></i>
+                    </div>
                     <div>
                         <div class="text-muted small">Lotes por vencer</div>
                         <div class="fw-bold fs-5 text-warning">@ViewBag.PorVencer</div>
@@ -64,7 +68,9 @@
         <div class="col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-danger bg-opacity-10 p-3 fs-3">🚨</div>
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3 text-danger">
+                        <i class="fas fa-exclamation-circle fs-4"></i>
+                    </div>
                     <div>
                         <div class="text-muted small">Lotes vencidos</div>
                         <div class="fw-bold fs-5 text-danger">@ViewBag.Vencidos</div>
@@ -75,52 +81,50 @@
         </div>
     </div>
 
-    <!-- VENCIMIENTOS -->
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-warning bg-opacity-10 border-0">
-                    <h6 class="mb-0">
-                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-clock text-warning me-1"></i>
                         Lotes por vencer (próximos 7 días)
                     </h6>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
-                            <tr>
-                                <th>Producto</th>
+                            <tr style="font-size: 0.85rem">
+                                <th class="ps-3">Producto</th>
                                 <th>Lote</th>
                                 <th>Vence</th>
                                 <th>Días</th>
-                                <th>Cant.</th>
+                                <th class="pe-3">Cant.</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @if (ViewBag.LotesPorVencer != null &&
-                            ((IEnumerable<dynamic>)ViewBag.LotesPorVencer).Any())
+                            @if (ViewBag.LotesPorVencer != null && ((IEnumerable<dynamic>)ViewBag.LotesPorVencer).Any())
                             {
                                 foreach (var l in ViewBag.LotesPorVencer)
                                 {
                                     <tr>
-                                        <td>@l.Producto</td>
-                                        <td><small>@l.NumeroLote</small></td>
-                                        <td>@l.FechaVence</td>
+                                        <td class="ps-3">@l.Producto</td>
+                                        <td><small class="text-muted">@l.NumeroLote</small></td>
+                                        <td><small>@l.FechaVence</small></td>
                                         <td>
-                                            <span class="badge @(l.DiasRestantes <= 3
-                                                ? "bg-danger" : "bg-warning text-dark")">
-                                                @l.DiasRestantes días
+                                            <span class="badge @(l.DiasRestantes <= 3 ? "bg-danger" : "bg-warning text-dark")">
+                                                @l.DiasRestantes d
                                             </span>
                                         </td>
-                                        <td>@l.Cantidad</td>
+                                        <td class="pe-3">@l.Cantidad</td>
                                     </tr>
                                 }
                             }
                             else
                             {
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-3">
-                                        ✅ Sin lotes por vencer
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-check-circle text-success d-block fs-2 mb-2"></i>
+                                        Sin lotes por vencer
                                     </td>
                                 </tr>
                             }
@@ -133,42 +137,42 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-danger bg-opacity-10 border-0">
-                    <h6 class="mb-0">
-                        <i class="fas fa-skull-crossbones text-danger"></i>
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-ban text-danger me-1"></i>
                         Lotes vencidos
                     </h6>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
-                            <tr>
-                                <th>Producto</th>
+                            <tr style="font-size: 0.85rem">
+                                <th class="ps-3">Producto</th>
                                 <th>Lote</th>
                                 <th>Venció</th>
-                                <th>Hace</th>
-                                <th>Cant.</th>
+                                <th>Estado</th>
+                                <th class="pe-3">Cant.</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @if (ViewBag.LotesVencidos != null &&
-                            ((IEnumerable<dynamic>)ViewBag.LotesVencidos).Any())
+                            @if (ViewBag.LotesVencidos != null && ((IEnumerable<dynamic>)ViewBag.LotesVencidos).Any())
                             {
                                 foreach (var l in ViewBag.LotesVencidos)
                                 {
                                     <tr class="table-danger">
-                                        <td>@l.Producto</td>
-                                        <td><small>@l.NumeroLote</small></td>
-                                        <td>@l.FechaVence</td>
-                                        <td><span class="badge bg-danger">@l.DiasVencido días</span></td>
-                                        <td>@l.Cantidad</td>
+                                        <td class="ps-3">@l.Producto</td>
+                                        <td><small class="text-muted">@l.NumeroLote</small></td>
+                                        <td><small>@l.FechaVence</small></td>
+                                        <td><span class="badge bg-danger">@l.DiasVencido d</span></td>
+                                        <td class="pe-3">@l.Cantidad</td>
                                     </tr>
                                 }
                             }
                             else
                             {
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-3">
-                                        ✅ Sin lotes vencidos
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-shield-alt text-success d-block fs-2 mb-2"></i>
+                                        Sin lotes vencidos
                                     </td>
                                 </tr>
                             }
@@ -179,47 +183,45 @@
         </div>
     </div>
 
-    <!-- VENTAS Y STOCK -->
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary bg-opacity-10 border-0">
-                    <h6 class="mb-0">
-                        <i class="fas fa-shopping-cart text-primary"></i>
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-shopping-basket text-primary me-1"></i>
                         Últimas ventas del día
                     </h6>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
-                            <tr>
-                                <th>#</th>
+                            <tr style="font-size: 0.85rem">
+                                <th class="ps-3">ID</th>
                                 <th>Cliente</th>
-                                <th>Comprobante</th>
+                                <th>Tipo</th>
                                 <th>Total</th>
-                                <th>Hora</th>
+                                <th class="pe-3">Hora</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @if (ViewBag.UltimasVentas != null &&
-                            ((IEnumerable<dynamic>)ViewBag.UltimasVentas).Any())
+                            @if (ViewBag.UltimasVentas != null && ((IEnumerable<dynamic>)ViewBag.UltimasVentas).Any())
                             {
                                 foreach (var v in ViewBag.UltimasVentas)
                                 {
                                     <tr>
-                                        <td><small class="text-muted">#@v.IdVenta</small></td>
-                                        <td>@v.Cliente</td>
-                                        <td><span class="badge bg-secondary">@v.TipoComprobante</span></td>
-                                        <td class="fw-semibold">$@String.Format("{0:N2}", v.Total)</td>
-                                        <td><small class="text-muted">@v.Fecha</small></td>
+                                        <td class="ps-3 text-muted">#@v.IdVenta</td>
+                                        <td class="fw-semibold">@v.Cliente</td>
+                                        <td><span class="badge bg-light text-dark border">@v.TipoComprobante</span></td>
+                                        <td class="fw-bold text-primary">$@String.Format("{0:N2}", v.Total)</td>
+                                        <td class="pe-3"><small class="text-muted">@v.Fecha</small></td>
                                     </tr>
                                 }
                             }
                             else
                             {
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-3">
-                                        Sin ventas registradas hoy
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No hay ventas registradas hoy
                                     </td>
                                 </tr>
                             }
@@ -231,33 +233,33 @@
 
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-danger bg-opacity-10 border-0
-                            d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="fas fa-boxes text-danger"></i> Stock bajo
+                <div class="card-header bg-danger bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-layer-group text-danger me-1"></i> Stock bajo
                     </h6>
-                    <span class="badge bg-danger">@ViewBag.StockBajo productos</span>
+                    <span class="badge bg-danger">@ViewBag.StockBajo alertas</span>
                 </div>
-                <div class="card-body d-flex align-items-center justify-content-center">
+                <div class="card-body d-flex align-items-center justify-content-center py-4">
                     @if ((int)ViewBag.StockBajo == 0)
                     {
-                        <div class="text-center text-muted">
-                            <div class="fs-1">✅</div>
-                            <div>Stock suficiente en todos los productos</div>
+                        <div class="text-center">
+                            <i class="fas fa-check-double text-success fs-1 mb-2"></i>
+                            <div class="text-muted small">Niveles de stock óptimos</div>
                         </div>
                     }
                     else
                     {
                         <div class="text-center">
                             <div class="display-4 text-danger fw-bold">@ViewBag.StockBajo</div>
-                            <div class="text-muted">productos bajo el mínimo</div>
+                            <div class="text-muted small mb-3">productos bajo el mínimo</div>
                             <a asp-controller="Inventario" asp-action="Index"
-                               class="btn btn-sm btn-outline-danger mt-2">Ver detalle</a>
+                               class="btn btn-sm btn-outline-danger px-4">
+                                <i class="fas fa-eye me-1"></i> Ver detalle
+                            </a>
                         </div>
                     }
                 </div>
             </div>
         </div>
     </div>
-
 </div>
