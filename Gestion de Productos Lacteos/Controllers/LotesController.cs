@@ -56,8 +56,14 @@ namespace Gestion_de_Productos_Lacteos.Controllers
 
             var lotes = await query.ToListAsync();
 
-            // Bag para mantener los valores en los filtros de la vista
-            ViewBag.IdProducto = new SelectList(_context.Productos.OrderBy(p => p.NombreProducto), "IdProducto", "NombreProducto", idProducto);
+            // CARGA DE PRODUCTOS: Solo los que están habilitados (Estado == true)
+            ViewBag.IdProducto = new SelectList(
+                _context.Productos.Where(p => p.Estado == true).OrderBy(p => p.NombreProducto),
+                "IdProducto",
+                "NombreProducto",
+                idProducto
+            );
+
             ViewBag.BuscarActual = buscar;
             ViewBag.EstadoActual = estado;
             ViewBag.OrdenActual = orden;
@@ -65,14 +71,12 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             return View(lotes);
         }
 
-        // GET: Lotes/GetLote/5 (Para cargar datos en el modal de edición)
         [HttpGet]
         public async Task<IActionResult> GetLote(int id)
         {
             var lote = await _context.Lotes.FindAsync(id);
             if (lote == null) return NotFound();
 
-            // Devolvemos un objeto simplificado para evitar errores de referencia circular
             return Json(new
             {
                 idLote = lote.IdLote,
@@ -84,7 +88,6 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             });
         }
 
-        // POST: Lotes/Save (Unificado para Crear y Editar)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(Lote lote)
@@ -94,12 +97,10 @@ namespace Gestion_de_Productos_Lacteos.Controllers
                 if (lote.IdLote == 0)
                 {
                     _context.Add(lote);
-                    TempData["Success"] = "Lote creado correctamente.";
                 }
                 else
                 {
                     _context.Update(lote);
-                    TempData["Success"] = "Lote actualizado correctamente.";
                 }
 
                 await _context.SaveChangesAsync();
@@ -111,32 +112,21 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             }
         }
 
-        // POST: Lotes/Delete/5
-        [HttpPost]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var lote = await _context.Lotes.FindAsync(id);
-            if (lote == null) return Json(new { success = false, message = "No se encontró el lote." });
-
-            _context.Lotes.Remove(lote);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
-        }
         [HttpPost]
         public async Task<IActionResult> MarcarComoVencido(int id)
         {
             var lote = await _context.Lotes.FindAsync(id);
             if (lote == null) return Json(new { success = false, message = "Lote no encontrado." });
 
-            // Ponemos la fecha de ayer para asegurar que el sistema lo detecte como vencido de inmediato
-            lote.FechaVencimiento = DateOnly.FromDateTime(DateTime.Now.AddDays(-1));
+            // Validación extra: Si ya no hay stock, no tiene sentido marcarlo como vencido
+            if (lote.Cantidad <= 0)
+                return Json(new { success = false, message = "El lote ya está agotado." });
 
+            lote.FechaVencimiento = DateOnly.FromDateTime(DateTime.Now.AddDays(-1));
             _context.Update(lote);
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, message = "El lote ha sido marcado como vencido." });
         }
-
-
     }
 }

@@ -143,5 +143,19 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             await _context.SaveChangesAsync();
             return Json(new { success = true });
         }
+
+        // POST: /Productos/Deshabilitar/5
+        [HttpPost]
+        public async Task<IActionResult> CambiarEstado(int id)
+        {
+            var producto = await _context.Productos.FindAsync(id);
+            if (producto == null) return Json(new { success = false });
+
+            // Cambiamos al estado contrario (Toggle)
+            producto.Estado = !producto.Estado;
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, nuevoEstado = producto.Estado });
+        }
     }
 }

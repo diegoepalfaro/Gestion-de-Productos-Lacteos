@@ -23,6 +23,8 @@ public partial class Producto
 
     public decimal? PrecioVenta { get; set; }
 
+    public bool Estado { get; set; } = true;
+
     [ForeignKey("IdCategoria")]
     public virtual Categoria? CategoriaNavigation { get; set; }
 

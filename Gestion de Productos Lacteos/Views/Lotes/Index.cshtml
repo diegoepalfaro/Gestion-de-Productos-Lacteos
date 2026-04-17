@@ -5,7 +5,6 @@
 }
 
 <style>
-    /* Diseño de doble borde azul para Panel de Filtros y Modal */
     .double-border-blue {
         border: 5px double #0d6efd !important;
         border-radius: 15px;
@@ -17,19 +16,17 @@
         padding: 20px;
     }
 
-    .form-control-sm:focus, .form-select-sm:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    .producto-deshabilitado {
+        opacity: 0.6;
+        background-color: #fcfcfc;
     }
 </style>
 
 <div class="container-fluid px-4 py-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-0 fw-bold">
-                <i class="fas fa-layer-group text-primary me-2"></i>Control de Lotes
-            </h4>
-            <small class="text-muted">Gestión inteligente de stock y caducidad</small>
+            <h4 class="mb-0 fw-bold"><i class="fas fa-layer-group text-primary me-2"></i>Control de Lotes</h4>
+            <small class="text-muted">Gestión de existencias y trazabilidad</small>
         </div>
         <button onclick="abrirModal(0)" class="btn btn-primary shadow-sm">
             <i class="fas fa-plus-circle me-1"></i> Nuevo Lote
@@ -40,24 +37,17 @@
         <div class="card-body filter-panel">
             <form id="formFiltros" method="get" asp-action="Index" class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-primary">
-                        <i class="fas fa-search me-1"></i> Búsqueda rápida
-                    </label>
-                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm"
-                           placeholder="Lote o producto..." value="@ViewBag.BuscarActual">
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-search me-1"></i> Búsqueda rápida</label>
+                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm" placeholder="Lote o producto..." value="@ViewBag.BuscarActual">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-primary">
-                        <i class="fas fa-box me-1"></i> Producto
-                    </label>
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-box me-1"></i> Producto</label>
                     <select name="idProducto" id="idProducto" class="form-select form-select-sm" asp-items="ViewBag.IdProducto">
-                        <option value="">-- Todos los productos --</option>
+                        <option value="">-- Todos los productos activos --</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-primary">
-                        <i class="fas fa-info-circle me-1"></i> Estado
-                    </label>
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-info-circle me-1"></i> Estado</label>
                     <select name="estado" id="estado" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         <option value="disponibles" selected="@(ViewBag.EstadoActual == "disponibles")">Disponibles</option>
@@ -65,18 +55,14 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-primary">
-                        <i class="fas fa-sort me-1"></i> Ordenar vencimiento
-                    </label>
+                    <label class="form-label small fw-bold text-primary"><i class="fas fa-sort me-1"></i> Ordenar vencimiento</label>
                     <select name="orden" id="orden" class="form-select form-select-sm">
                         <option value="fecha_asc" selected="@(ViewBag.OrdenActual == "fecha_asc")">Más próximos primero</option>
                         <option value="fecha_desc" selected="@(ViewBag.OrdenActual == "fecha_desc")">Más lejanos primero</option>
                     </select>
                 </div>
                 <div class="col-md-1">
-                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar todos los filtros">
-                        <i class="fas fa-eraser"></i>
-                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar filtros"><i class="fas fa-eraser"></i></a>
                 </div>
             </form>
         </div>
@@ -85,35 +71,44 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 text-center">
                     <thead class="table-light text-muted small uppercase">
                         <tr>
-                            <th class="ps-4">Producto</th>
+                            <th class="ps-4 text-start">Producto</th>
                             <th>N° Lote</th>
                             <th>Vencimiento</th>
-                            <th class="text-center">Stock</th>
+                            <th>Stock</th>
                             <th>Estado</th>
-                            <th class="text-center pe-4">Acciones</th>
+                            <th class="pe-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (!Model.Any())
-                        {
-                            <tr><td colspan="6" class="text-center py-5 text-muted small italic">No hay lotes que coincidan con la búsqueda activa.</td></tr>
-                        }
                         @foreach (var item in Model)
                         {
-                            <tr>
-                                <td class="ps-4 fw-bold">@item.IdProductoNavigation?.NombreProducto</td>
-                                <td><span class="badge bg-light text-primary border border-primary border-opacity-25">@item.NumeroLote</span></td>
+                            var esInactivo = item.IdProductoNavigation?.Estado == false;
+                            <tr class="@(esInactivo ? "producto-deshabilitado" : "")">
+                                <td class="ps-4 text-start">
+                                    <span class="fw-bold">@item.IdProductoNavigation?.NombreProducto</span>
+                                    @if (esInactivo)
+                                    {
+                                        <small class="text-danger d-block" style="font-size: 10px;">(DESHABILITADO)</small>
+                                    }
+                                </td>
+                                <td><span class="badge bg-light text-primary border">@item.NumeroLote</span></td>
                                 <td class="small">@item.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
-                                <td class="text-center fw-bold">@item.Cantidad</td>
+                                <td>
+                                    <span class="fw-bold @(item.Cantidad == 0 ? "text-danger" : "")">@item.Cantidad</span>
+                                </td>
                                 <td>
                                     @{
                                         var hoy = DateOnly.FromDateTime(DateTime.Now);
                                         var dias = item.FechaVencimiento.HasValue ? item.FechaVencimiento.Value.DayNumber - hoy.DayNumber : 0;
                                     }
-                                    @if (dias < 0)
+                                    @if (item.Cantidad <= 0)
+                                    {
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2">AGOTADO</span>
+                                    }
+                                    else if (dias < 0)
                                     {
                                         <span class="badge bg-dark bg-opacity-10 text-dark border border-dark px-2">VENCIDO</span>
                                     }
@@ -126,15 +121,11 @@
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success px-2">@dias días</span>
                                     }
                                 </td>
-                                <td class="text-center pe-4">
-                                    <button onclick="abrirModal(@item.IdLote)" class="btn btn-sm btn-outline-primary border-0 shadow-sm">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    @if (dias >= 0)
+                                <td class="pe-4">
+                                    <button onclick="abrirModal(@item.IdLote)" class="btn btn-sm btn-outline-primary border-0"><i class="fas fa-edit"></i></button>
+                                    @if (dias >= 0 && item.Cantidad > 0)
                                     {
-                                        <button onclick="marcarVencido(@item.IdLote, '@item.NumeroLote')" class="btn btn-sm btn-outline-secondary border-0 shadow-sm">
-                                            <i class="fas fa-hourglass-end"></i>
-                                        </button>
+                                        <button onclick="marcarVencido(@item.IdLote, '@item.NumeroLote')" class="btn btn-sm btn-outline-secondary border-0"><i class="fas fa-hourglass-end"></i></button>
                                     }
                                 </td>
                             </tr>
@@ -150,56 +141,45 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content double-border-blue">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-primary" id="tituloModal">
-                    <i class="fas fa-layer-group me-2"></i><span>Nuevo Lote</span>
-                </h5>
+                <h5 class="modal-title fw-bold text-primary" id="tituloModal"><i class="fas fa-layer-group me-2"></i><span>Nuevo Lote</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <form id="formLote">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="IdLote" name="IdLote" value="0" />
-
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-primary">Producto</label>
-                        <select id="IdProducto" name="IdProducto" class="form-select border-primary border-opacity-25" required>
-                            <option value="">-- Seleccionar producto --</option>
-                            @if (ViewBag.IdProducto != null)
+                        <select id="IdProducto" name="IdProducto" class="form-select" required>
+                            <option value="">-- Seleccionar producto activo --</option>
+                            @foreach (var prod in (IEnumerable<SelectListItem>)ViewBag.IdProducto)
                             {
-                                foreach (var prod in (IEnumerable<SelectListItem>)ViewBag.IdProducto)
-                                {
-                                    <option value="@prod.Value">@prod.Text</option>
-                                }
+                                <option value="@prod.Value">@prod.Text</option>
                             }
                         </select>
                     </div>
-
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-primary">Código Lote</label>
-                            <input type="text" id="NumeroLote" name="NumeroLote" class="form-control border-primary border-opacity-25" required />
+                            <input type="text" id="NumeroLote" name="NumeroLote" class="form-control" required />
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-primary">Cantidad Inicial</label>
-                            <input type="number" id="Cantidad" name="Cantidad" class="form-control border-primary border-opacity-25" required min="1" />
+                            <label class="form-label small fw-bold text-primary">Cantidad Actual</label>
+                            <input type="number" id="Cantidad" name="Cantidad" class="form-control" required min="0" /> @* CAMBIADO A MIN 0 *@
                         </div>
                     </div>
-
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-primary">F. Producción</label>
-                            <input type="date" id="FechaProduccion" name="FechaProduccion" class="form-control border-primary border-opacity-25" />
+                            <input type="date" id="FechaProduccion" name="FechaProduccion" class="form-control" />
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-primary">F. Vencimiento</label>
-                            <input type="date" id="FechaVencimiento" name="FechaVencimiento" class="form-control border-primary border-opacity-25" required />
+                            <input type="date" id="FechaVencimiento" name="FechaVencimiento" class="form-control" required />
                         </div>
                     </div>
-
                     <div class="d-grid mt-4">
-                        <button type="button" onclick="guardarLote()" class="btn btn-primary fw-bold shadow-sm">
-                            <i class="fas fa-save me-2"></i>Guardar Lote
-                        </button>
+                        <button type="button" onclick="guardarLote()" class="btn btn-primary fw-bold shadow-sm"><i class="fas fa-save me-2"></i>Guardar Lote</button>
                     </div>
                 </form>
             </div>
@@ -209,22 +189,15 @@
 
 @section Scripts {
     <script>
-        // Búsqueda Activa Automática
         const formFiltros = document.getElementById('formFiltros');
-        const inputsFiltro = formFiltros.querySelectorAll('select, input');
-
-        inputsFiltro.forEach(input => {
+        formFiltros.querySelectorAll('select, input').forEach(input => {
             input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', () => {
                 clearTimeout(this.delay);
-                this.delay = setTimeout(() => {
-                    formFiltros.submit();
-                }, 400);
+                this.delay = setTimeout(() => formFiltros.submit(), 400);
             });
         });
 
-        // Lógica de Modal y CRUD
         const modalLote = new bootstrap.Modal(document.getElementById('modalLote'));
-
         function abrirModal(id) {
             document.getElementById('formLote').reset();
             document.getElementById('IdLote').value = id;
@@ -247,8 +220,7 @@
         function guardarLote() {
             const form = document.getElementById('formLote');
             if (!form.checkValidity()) { form.reportValidity(); return; }
-            const formData = new FormData(form);
-            fetch('/Lotes/Save', { method: 'POST', body: formData })
+            fetch('/Lotes/Save', { method: 'POST', body: new FormData(form) })
                 .then(res => res.json()).then(data => { if (data.success) location.reload(); });
         }
 
@@ -262,7 +234,10 @@
                 confirmButtonText: 'Confirmar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    $.post(`/Lotes/MarcarComoVencido/${id}`, () => location.reload());
+                    $.post(`/Lotes/MarcarComoVencido/${id}`, (res) => {
+                        if (res.success) location.reload();
+                        else Swal.fire('Error', res.message, 'error');
+                    });
                 }
             });
         }
