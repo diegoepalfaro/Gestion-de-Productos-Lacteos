@@ -26,7 +26,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-0 fw-bold"><i class="fas fa-layer-group text-primary me-2"></i>Control de Lotes</h4>
-            <small class="text-muted">Gestión de existencias y trazabilidad</small>
+            <small class="text-muted">Gestión de existencias, precios y trazabilidad</small>
         </div>
         <button onclick="abrirModal(0)" class="btn btn-primary shadow-sm">
             <i class="fas fa-plus-circle me-1"></i> Nuevo Lote
@@ -38,11 +38,11 @@
             <form id="formFiltros" method="get" asp-action="Index" class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-primary"><i class="fas fa-search me-1"></i> Búsqueda rápida</label>
-                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm" placeholder="Lote o producto..." value="@ViewBag.BuscarActual">
+                    <input type="text" name="buscar" id="buscar" class="form-control form-control-sm" placeholder="Lote, producto o desc..." value="@ViewBag.BuscarActual">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-primary"><i class="fas fa-box me-1"></i> Producto</label>
-                    <select name="idProducto" id="idProducto" class="form-select form-select-sm" asp-items="ViewBag.IdProducto">
+                    <select name="idProducto" id="idProductoFiltro" class="form-select form-select-sm" asp-items="ViewBag.IdProducto">
                         <option value="">-- Todos los productos activos --</option>
                     </select>
                 </div>
@@ -76,6 +76,8 @@
                         <tr>
                             <th class="ps-4 text-start">Producto</th>
                             <th>N° Lote</th>
+                            <th>Descripción</th>
+                            <th>PVP (Factura)</th>
                             <th>Vencimiento</th>
                             <th>Stock</th>
                             <th>Estado</th>
@@ -83,26 +85,37 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="8" class="text-center py-5 text-muted">No se encontraron lotes registrados.</td></tr>
+                        }
                         @foreach (var item in Model)
                         {
-                            var esInactivo = item.IdProductoNavigation?.Estado == false;
+                            var esInactivo = item.ProductoNavigation?.Estado == false;
                             <tr class="@(esInactivo ? "producto-deshabilitado" : "")">
                                 <td class="ps-4 text-start">
-                                    <span class="fw-bold">@item.IdProductoNavigation?.NombreProducto</span>
+                                    <span class="fw-bold">@item.ProductoNavigation?.NombreProducto</span>
                                     @if (esInactivo)
                                     {
                                         <small class="text-danger d-block" style="font-size: 10px;">(DESHABILITADO)</small>
                                     }
                                 </td>
                                 <td><span class="badge bg-light text-primary border">@item.NumeroLote</span></td>
+                                <td>
+                                    <small class="text-muted">@(string.IsNullOrEmpty(item.Descripcion) ? "-" : item.Descripcion)</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">$@item.PrecioFactura.ToString("0.00")</span>
+                                </td>
                                 <td class="small">@item.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
                                 <td>
                                     <span class="fw-bold @(item.Cantidad == 0 ? "text-danger" : "")">@item.Cantidad</span>
                                 </td>
                                 <td>
                                     @{
-                                        var hoy = DateOnly.FromDateTime(DateTime.Now);
-                                        var dias = item.FechaVencimiento.HasValue ? item.FechaVencimiento.Value.DayNumber - hoy.DayNumber : 0;
+                                        // CORRECCIÓN DE FECHAS: Se usa DateTime en lugar de DateOnly para coincidir con SQL
+                                        var hoy = DateTime.Today;
+                                        var dias = item.FechaVencimiento.HasValue ? (item.FechaVencimiento.Value.Date - hoy).Days : 0;
                                     }
                                     @if (item.Cantidad <= 0)
                                     {
@@ -125,7 +138,7 @@
                                     <button onclick="abrirModal(@item.IdLote)" class="btn btn-sm btn-outline-primary border-0"><i class="fas fa-edit"></i></button>
                                     @if (dias >= 0 && item.Cantidad > 0)
                                     {
-                                        <button onclick="marcarVencido(@item.IdLote, '@item.NumeroLote')" class="btn btn-sm btn-outline-secondary border-0"><i class="fas fa-hourglass-end"></i></button>
+                                        <button onclick="marcarVencido(@item.IdLote, '@item.NumeroLote')" class="btn btn-sm btn-outline-secondary border-0" title="Marcar como vencido manual"><i class="fas fa-hourglass-end"></i></button>
                                     }
                                 </td>
                             </tr>
@@ -138,7 +151,7 @@
 </div>
 
 <div class="modal fade" id="modalLote" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content double-border-blue">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold text-primary" id="tituloModal"><i class="fas fa-layer-group me-2"></i><span>Nuevo Lote</span></h5>
@@ -148,16 +161,24 @@
                 <form id="formLote">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="IdLote" name="IdLote" value="0" />
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-primary">Producto</label>
-                        <select id="IdProducto" name="IdProducto" class="form-select" required>
-                            <option value="">-- Seleccionar producto activo --</option>
-                            @foreach (var prod in (IEnumerable<SelectListItem>)ViewBag.IdProducto)
-                            {
-                                <option value="@prod.Value">@prod.Text</option>
-                            }
-                        </select>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-primary">Producto</label>
+                            <select id="IdProducto" name="IdProducto" class="form-select" required>
+                                <option value="">-- Seleccionar producto activo --</option>
+                                @foreach (var prod in (IEnumerable<SelectListItem>)ViewBag.IdProducto)
+                                {
+                                    <option value="@prod.Value">@prod.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-primary">Descripción del Lote (Opcional)</label>
+                            <input type="text" id="Descripcion" name="Descripcion" class="form-control" placeholder="Ej: Empaque promocional..." />
+                        </div>
                     </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-primary">Código Lote</label>
@@ -165,9 +186,10 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-primary">Cantidad Actual</label>
-                            <input type="number" id="Cantidad" name="Cantidad" class="form-control" required min="0" /> @* CAMBIADO A MIN 0 *@
+                            <input type="number" id="Cantidad" name="Cantidad" class="form-control" required min="0" />
                         </div>
                     </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-primary">F. Producción</label>
@@ -178,8 +200,34 @@
                             <input type="date" id="FechaVencimiento" name="FechaVencimiento" class="form-control" required />
                         </div>
                     </div>
+
+                    <h6 class="text-primary fw-bold mt-3 border-bottom pb-2"><i class="fas fa-file-invoice-dollar me-2"></i>Desglose de Precios (IVA 13%)</h6>
+                    <div class="row bg-light p-3 rounded mb-3 border">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-bold text-primary">Vta Neta ($)</label>
+                            <input type="number" id="VtaNeta" name="VtaNeta" class="form-control fw-bold text-primary" step="0.0001" placeholder="Ej: 0.91" required />
+                            <small class="text-muted" style="font-size: 0.7rem;">(Precio base)</small>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-bold text-muted">IVA (13%)</label>
+                            <input type="number" id="IvaConsumidor" name="IvaConsumidor" class="form-control bg-white" step="0.0001" readonly tabindex="-1" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-bold text-muted">CCF s/IVA ($)</label>
+                            <input type="number" id="CcfSiva" name="CcfSiva" class="form-control bg-white" step="0.0001" readonly tabindex="-1" />
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <label class="form-label small fw-bold text-muted">IVA Contribuyente (13%)</label>
+                            <input type="number" id="IvaContribuyente" name="IvaContribuyente" class="form-control bg-white" step="0.0001" readonly tabindex="-1" />
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <label class="form-label small fw-bold text-success">Total Factura (PVP)</label>
+                            <input type="number" id="PrecioFactura" name="PrecioFactura" class="form-control bg-white fw-bold text-success" step="0.0001" readonly tabindex="-1" />
+                        </div>
+                    </div>
+
                     <div class="d-grid mt-4">
-                        <button type="button" onclick="guardarLote()" class="btn btn-primary fw-bold shadow-sm"><i class="fas fa-save me-2"></i>Guardar Lote</button>
+                        <button type="button" onclick="guardarLote()" class="btn btn-primary fw-bold shadow-sm py-2"><i class="fas fa-save me-2"></i>Guardar Lote</button>
                     </div>
                 </form>
             </div>
@@ -189,18 +237,45 @@
 
 @section Scripts {
     <script>
+        // --- Filtros ---
         const formFiltros = document.getElementById('formFiltros');
         formFiltros.querySelectorAll('select, input').forEach(input => {
-            input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', () => {
+            input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', function () {
                 clearTimeout(this.delay);
                 this.delay = setTimeout(() => formFiltros.submit(), 400);
             });
         });
 
+        // --- Lógica del Cálculo de IVA ---
+        document.getElementById('VtaNeta').addEventListener('input', calcularPrecios);
+
+        function calcularPrecios() {
+            let vtaNeta = parseFloat(document.getElementById('VtaNeta').value) || 0;
+
+            // Cálculos para Consumidor Final (13%)
+            let iva = vtaNeta * 0.13;
+            let totalConsumidor = vtaNeta + iva;
+
+            document.getElementById('IvaConsumidor').value = iva.toFixed(4);
+
+            // El precio de consumidor suele ser la base para el crédito fiscal (CCF)
+            document.getElementById('CcfSiva').value = totalConsumidor.toFixed(4);
+
+            // Cálculos para Contribuyente sobre la nueva base
+            let ivaCCF = totalConsumidor * 0.13;
+            document.getElementById('IvaContribuyente').value = ivaCCF.toFixed(4);
+
+            // Gran Total Sugerido
+            let precioFactura = totalConsumidor + ivaCCF;
+            document.getElementById('PrecioFactura').value = precioFactura.toFixed(4);
+        }
+
+        // --- Modales y CRUD ---
         const modalLote = new bootstrap.Modal(document.getElementById('modalLote'));
         function abrirModal(id) {
             document.getElementById('formLote').reset();
             document.getElementById('IdLote').value = id;
+
             if (id === 0) {
                 document.getElementById('tituloModal').querySelector('span').innerText = "Nuevo Lote";
                 modalLote.show();
@@ -209,9 +284,18 @@
                 fetch(`/Lotes/GetLote/${id}`).then(res => res.json()).then(data => {
                     document.getElementById('IdProducto').value = data.idProducto;
                     document.getElementById('NumeroLote').value = data.numeroLote;
+                    document.getElementById('Descripcion').value = data.descripcion || '';
                     document.getElementById('Cantidad').value = data.cantidad;
                     document.getElementById('FechaProduccion').value = data.fechaProduccion;
                     document.getElementById('FechaVencimiento').value = data.fechaVencimiento;
+
+                    // Cargar Precios
+                    document.getElementById('VtaNeta').value = data.vtaNeta;
+                    document.getElementById('IvaConsumidor').value = data.ivaConsumidor;
+                    document.getElementById('CcfSiva').value = data.ccfSiva;
+                    document.getElementById('IvaContribuyente').value = data.ivaContribuyente;
+                    document.getElementById('PrecioFactura').value = data.precioFactura;
+
                     modalLote.show();
                 });
             }
@@ -220,8 +304,12 @@
         function guardarLote() {
             const form = document.getElementById('formLote');
             if (!form.checkValidity()) { form.reportValidity(); return; }
+
             fetch('/Lotes/Save', { method: 'POST', body: new FormData(form) })
-                .then(res => res.json()).then(data => { if (data.success) location.reload(); });
+                .then(res => res.json()).then(data => {
+                    if (data.success) location.reload();
+                    else Swal.fire('Error', data.message, 'error');
+                });
         }
 
         function marcarVencido(id, numero) {

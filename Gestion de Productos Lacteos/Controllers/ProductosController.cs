@@ -71,7 +71,7 @@ namespace Gestion_de_Productos_Lacteos.Controllers
         [HttpGet]
         public async Task<IActionResult> GetLotes(int id)
         {
-            var hoy = DateOnly.FromDateTime(DateTime.Now);
+            var hoy = DateTime.Today;
 
             var lotes = await _context.Lotes
                 .Where(l => l.IdProducto == id)
@@ -79,12 +79,14 @@ namespace Gestion_de_Productos_Lacteos.Controllers
 
             var resultado = lotes.Select(l => new {
                 l.NumeroLote,
+                l.Descripcion, // Se incluye la nueva descripción
+                l.PrecioFactura, // Se envía el precio final sugerido al público
                 l.FechaProduccion,
                 l.FechaVencimiento,
                 l.Cantidad,
-                // Lógica segura para DateOnly?
+                // Lógica de fechas ajustada para DateTime
                 DiasRestantes = l.FechaVencimiento.HasValue
-                    ? l.FechaVencimiento.Value.DayNumber - hoy.DayNumber
+                    ? (l.FechaVencimiento.Value.Date - hoy).Days
                     : 0
             });
 

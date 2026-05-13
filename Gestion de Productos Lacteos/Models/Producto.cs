@@ -13,15 +13,10 @@ public partial class Producto
     [Required]
     public string NombreProducto { get; set; } = null!;
 
-    // Mapeo explícito a la nueva columna
     [Column("idCategoria")]
     public int? IdCategoria { get; set; }
 
     public string? Descripcion { get; set; }
-
-    public decimal? PrecioCompra { get; set; }
-
-    public decimal? PrecioVenta { get; set; }
 
     public bool Estado { get; set; } = true;
 
@@ -29,8 +24,6 @@ public partial class Producto
     public virtual Categoria? CategoriaNavigation { get; set; }
 
     public virtual ICollection<DetalleCompra> DetalleCompras { get; set; } = new List<DetalleCompra>();
-
-    public virtual ICollection<DetalleVenta> DetalleVenta { get; set; } = new List<DetalleVenta>();
 
     public virtual ICollection<Inventario> Inventarios { get; set; } = new List<Inventario>();
 

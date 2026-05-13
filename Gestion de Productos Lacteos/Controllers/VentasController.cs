@@ -1,86 +1,140 @@
-﻿using Gestion_de_Productos_Lacteos.Models;
-using Microsoft.AspNetCore.Mvc;
-using SistemaInventarioLacteos.Models;
-using SistemaInventarioLacteos.Models.ViewModels;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Gestion_de_Productos_Lacteos.Models;
+using SistemaInventarioLacteos.Services;
 
-namespace SistemaInventarioLacteos.Controllers
+namespace Gestion_de_Productos_Lacteos.Controllers
 {
     public class VentasController : Controller
     {
-        // Datos temporales de productos (simulados)
-        private static List<Producto> _productos = new List<Producto>
-        {
-            new Producto { IdProducto = 1, NombreProducto = "Queso Fresco", PrecioVenta = 3.50m },
-            new Producto { IdProducto = 2, NombreProducto = "Leche Entera", PrecioVenta = 1.20m},
-            new Producto { IdProducto = 3, NombreProducto = "Yogur Natural", PrecioVenta = 2.80m },
-            new Producto { IdProducto = 4, NombreProducto = "Mantequilla", PrecioVenta = 4.50m },
-            new Producto { IdProducto = 5, NombreProducto = "Crema", PrecioVenta = 2.30m }
-        };
+        private readonly SistemaInventarioLacteosContext _context;
+        private readonly IEmailService _emailService;
 
-        private static List<Cliente> _clientes = new List<Cliente>
+        public VentasController(SistemaInventarioLacteosContext context, IEmailService emailService)
         {
-            new Cliente { IdCliente = 1, Nombre = "Consumidor Final", TipoCliente = "Consumidor Final" },
-            new Cliente { IdCliente = 2, Nombre = "Juan Pérez", TipoCliente = "Contribuyente", Nit = "1234-567890-123-4" },
-            new Cliente { IdCliente = 3, Nombre = "María López", TipoCliente = "Contribuyente", Nit = "5678-123456-789-0" }
-        };
+            _context = context;
+            _emailService = emailService;
+        }
 
-        // GET: Ventas/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Nueva()
         {
-            ViewBag.Clientes = _clientes;
+            if (HttpContext.Session.GetString("UsuarioNombre") == null)
+                return RedirectToAction("Login", "Home");
+
+            ViewBag.Clientes = await _context.Clientes.OrderBy(c => c.Nombre).ToListAsync();
             return View();
         }
 
-        // GET: Ventas/BuscarProductos
         [HttpGet]
-        public IActionResult BuscarProductos(string term)
+        public async Task<IActionResult> SugerirLotes(string term)
         {
-            if (string.IsNullOrEmpty(term))
-                return Json(new List<object>());
+            if (string.IsNullOrEmpty(term)) return Json(new List<object>());
 
-            var resultados = _productos
-                .Where(p => p.NombreProducto.ToLower().Contains(term.ToLower()))
-                .Select(p => new
+            var sugerencias = await _context.Lotes
+                .Include(l => l.ProductoNavigation) // Nombre corregido
+                .Where(l => (l.NumeroLote.Contains(term) || l.ProductoNavigation.NombreProducto.Contains(term))
+                            && l.Cantidad > 0)
+                .Take(8)
+                .Select(l => new
                 {
-                    idProducto = p.IdProducto,
-                    nombreProducto = p.NombreProducto,
-                    precioVenta = p.PrecioVenta,
-                    stockActual = 1
+                    label = $"{l.NumeroLote} - {l.ProductoNavigation.NombreProducto} (Stock: {l.Cantidad})",
+                    val = l.NumeroLote
                 })
-                .Take(10)
-                .ToList();
+                .ToListAsync();
 
-            return Json(resultados);
+            return Json(sugerencias);
         }
 
-        // POST: Ventas/RegistrarVenta
+        [HttpGet]
+        public async Task<IActionResult> BuscarPorLote(string codigo)
+        {
+            var lote = await _context.Lotes
+                .Include(l => l.ProductoNavigation) // Nombre corregido
+                .FirstOrDefaultAsync(l => l.NumeroLote == codigo && l.Cantidad > 0);
+
+            if (lote == null) return NotFound();
+
+            return Json(new
+            {
+                idLote = lote.IdLote,
+                nombre = lote.ProductoNavigation.NombreProducto,
+                precio = lote.PrecioFactura,
+                stock = lote.Cantidad,
+                numeroLote = lote.NumeroLote
+            });
+        }
+
         [HttpPost]
-        public IActionResult RegistrarVenta([FromBody] VentaViewModel venta)
+        public async Task<IActionResult> ProcesarVenta([FromBody] VentaRequest request)
         {
-            if (venta == null || venta.Detalles == null || !venta.Detalles.Any())
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return BadRequest(new { success = false, message = "No hay productos en la venta" });
+                var idUsuario = HttpContext.Session.GetInt32("UsuarioId") ?? 1;
+
+                var venta = new Venta
+                {
+                    IdCliente = request.IdCliente,
+                    IdUsuario = idUsuario,
+                    FechaVenta = DateTime.Now,
+                    Total = request.Items.Sum(i => i.Cantidad * i.Precio),
+                    TipoComprobante = "Consumidor Final"
+                };
+
+                _context.Venta.Add(venta);
+                await _context.SaveChangesAsync();
+
+                foreach (var item in request.Items)
+                {
+                    var lote = await _context.Lotes.FindAsync(item.IdLote);
+
+                    if (lote == null || lote.Cantidad < item.Cantidad)
+                        throw new Exception($"El lote {item.NumeroLote} no tiene stock suficiente.");
+
+                    lote.Cantidad -= item.Cantidad;
+
+                    var detalle = new DetalleVenta
+                    {
+                        IdVenta = venta.IdVenta,
+                        IdLote = item.IdLote, // Asegúrate que DetalleVenta tenga idLote y no idProducto
+                        Cantidad = item.Cantidad,
+                        Precio = item.Precio,
+                        Subtotal = item.Cantidad * item.Precio
+                    };
+
+                    _context.DetalleVenta.Add(detalle);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Json(new { success = true, idVenta = venta.IdVenta });
             }
-
-            // Aquí iría la lógica para guardar en base de datos
-            // Por ahora simulamos éxito
-            TempData["Success"] = $"Venta registrada exitosamente. Total: ${venta.Total}";
-            return Ok(new { success = true });
-        }
-
-        // GET: Ventas/Index (Historial)
-        public IActionResult Index()
-        {
-            // Datos simulados de ventas anteriores
-            var ventas = new List<Venta>
+            catch (Exception ex)
             {
-                new Venta { IdVenta = 1, FechaVenta = System.DateTime.Now.AddDays(-1), Total = 15.50m },
-                new Venta { IdVenta = 2, FechaVenta = System.DateTime.Now.AddDays(-2), Total = 23.80m },
-                new Venta { IdVenta = 3, FechaVenta = System.DateTime.Now.AddDays(-3), Total = 8.40m }
-            };
-            return View(ventas);
+                await transaction.RollbackAsync();
+                // Esto nos dirá exactamente qué columna o tabla falla
+                var mensajeCompleto = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    mensajeCompleto += " | Detalle: " + ex.InnerException.Message;
+                }
+                return Json(new { success = false, message = mensajeCompleto });
+            }
         }
+    }
+
+    public class VentaRequest
+    {
+        public int IdCliente { get; set; }
+        public List<VentaItemRequest> Items { get; set; }
+    }
+
+    public class VentaItemRequest
+    {
+        public int IdLote { get; set; }
+        public string NumeroLote { get; set; }
+        public int Cantidad { get; set; }
+        public decimal Precio { get; set; }
     }
 }

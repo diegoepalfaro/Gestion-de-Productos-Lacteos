@@ -97,7 +97,6 @@
                             <th class="ps-4 text-start">Producto</th>
                             <th>Categoría</th>
                             <th>Stock Total</th>
-                            <th>P. Venta</th>
                             <th>Estado</th>
                             <th class="pe-4">Acciones</th>
                         </tr>
@@ -106,7 +105,7 @@
                         @if (!Model.Any())
 
                         {
-                            <tr><td colspan="6" class="text-center py-5 text-muted">No se encontraron productos.</td></tr>
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No se encontraron productos.</td></tr>
                         }
                         @foreach (var p in Model)
 
@@ -135,7 +134,6 @@
                                         @stock unidades
                                     </span>
                                 </td>
-                                <td class="fw-bold">$@p.PrecioVenta?.ToString("N2")</td>
                                 <td>
                                     <span class="badge @(p.Estado ? "bg-primary" : "bg-secondary")">
                                         @(p.Estado ? "Activo" : "Deshabilitado")
@@ -191,31 +189,10 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-primary">Descripción</label>
-                        <textarea id="Descripcion" name="Descripcion" class="form-control" rows="2"></textarea>
+                        <textarea id="Descripcion" name="Descripcion" class="form-control" rows="3"></textarea>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-primary">Precio Compra</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">$</span>
-                                <input type="number" step="0.01" id="PrecioCompra" name="PrecioCompra" class="form-control" oninput="calcularMargen()" />
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-primary">Precio Venta</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">$</span>
-                                <input type="number" step="0.01" id="PrecioVenta" name="PrecioVenta" class="form-control" oninput="calcularMargen()" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="margen-info" class="alert alert-info py-2 small d-none mb-4">
-                        <i class="fas fa-info-circle me-1"></i> Margen estimado: <strong id="margen-valor"></strong>
-                    </div>
-
-                    <div class="d-grid mt-2">
+                    <div class="d-grid mt-4">
                         <button type="button" onclick="guardarProducto()" class="btn btn-primary fw-bold shadow-sm py-2">
                             <i class="fas fa-save me-2"></i>Guardar Producto
                         </button>
@@ -227,7 +204,7 @@
 </div>
 
 <div class="modal fade" id="modalVerLotes" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content double-border-blue">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-bold text-primary">
@@ -236,11 +213,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <table class="table table-sm align-middle">
+                <table class="table table-sm align-middle text-center">
                     <thead>
                         <tr class="text-muted small">
                             <th>N° LOTE</th>
-                            <th class="text-center">CANTIDAD</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>CANTIDAD</th>
+                            <th>PRECIO PÚBLICO</th>
                             <th>VENCIMIENTO</th>
                             <th>ESTADO</th>
                         </tr>
@@ -257,7 +236,7 @@
         // --- Búsqueda Activa Automática ---
         const formFiltros = document.getElementById('formFiltros');
         formFiltros.querySelectorAll('input, select').forEach(el => {
-            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
                 clearTimeout(this.delay);
                 this.delay = setTimeout(() => formFiltros.submit(), 400);
             });
@@ -265,11 +244,9 @@
 
         // --- Lógica del Modal de Producto ---
         const modalProd = new bootstrap.Modal(document.getElementById('modalProducto'));
-
         function abrirModalProducto(id) {
             document.getElementById('formProducto').reset();
             document.getElementById('IdProducto').value = id;
-            document.getElementById('margen-info').classList.add('d-none');
 
             if (id === 0) {
                 document.getElementById('tituloModalProducto').querySelector('span').innerText = "Nuevo Producto";
@@ -280,9 +257,6 @@
                     document.getElementById('NombreProducto').value = data.nombreProducto;
                     document.getElementById('IdCategoriaModal').value = data.idCategoria;
                     document.getElementById('Descripcion').value = data.descripcion;
-                    document.getElementById('PrecioCompra').value = data.precioCompra;
-                    document.getElementById('PrecioVenta').value = data.precioVenta;
-                    calcularMargen();
                     modalProd.show();
                 });
             }
@@ -300,29 +274,12 @@
                 });
         }
 
-        function calcularMargen() {
-            const c = parseFloat(document.getElementById('PrecioCompra').value) || 0;
-            const v = parseFloat(document.getElementById('PrecioVenta').value) || 0;
-            const info = document.getElementById('margen-info');
-            const val = document.getElementById('margen-valor');
-
-            if (c > 0 && v > 0) {
-                const margen = ((v - c) / c * 100).toFixed(1);
-                val.textContent = `${margen}% (+$${(v - c).toFixed(2)})`;
-                info.classList.remove('d-none');
-                info.className = `alert py-2 small ${margen >= 0 ? 'alert-info' : 'alert-warning'}`;
-            } else {
-                info.classList.add('d-none');
-            }
-        }
-
         // --- Lógica para Ver Lotes ---
         const modalLotesView = new bootstrap.Modal(document.getElementById('modalVerLotes'));
-
         function verLotes(id, nombre) {
             document.getElementById('nombreProdModal').innerText = nombre;
             const cuerpo = document.getElementById('tablaLotesCuerpo');
-            cuerpo.innerHTML = '<tr><td colspan="4" class="text-center py-3">Cargando...</td></tr>';
+            cuerpo.innerHTML = '<tr><td colspan="6" class="text-center py-3">Cargando...</td></tr>';
             modalLotesView.show();
 
             fetch(`/Productos/GetLotes/${id}`)
@@ -330,7 +287,7 @@
                 .then(data => {
                     cuerpo.innerHTML = '';
                     if (data.length === 0) {
-                        cuerpo.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">No hay lotes disponibles</td></tr>';
+                        cuerpo.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted">No hay lotes disponibles</td></tr>';
                         return;
                     }
                     data.forEach(l => {
@@ -345,10 +302,16 @@
                             badgeClass = "bg-warning text-dark";
                         }
 
+                        // Parseamos el precioFactura asegurando formato monetario (2 decimales)
+                        let precioFormateado = l.precioFactura ? parseFloat(l.precioFactura).toFixed(2) : "0.00";
+                        let descFormateada = l.descripcion ? l.descripcion : "<span class='text-muted fst-italic'>Sin descripción</span>";
+
                         cuerpo.innerHTML += `
                                     <tr>
                                         <td class="fw-bold text-primary">${l.numeroLote}</td>
-                                        <td class="text-center fw-bold">${l.cantidad}</td>
+                                        <td><small>${descFormateada}</small></td>
+                                        <td class="fw-bold">${l.cantidad}</td>
+                                        <td class="fw-bold text-success">$${precioFormateado}</td>
                                         <td>${l.fechaVencimiento ? new Date(l.fechaVencimiento).toLocaleDateString() : 'N/A'}</td>
                                         <td><span class="badge ${badgeClass}">${statusText}</span></td>
                                     </tr>`;

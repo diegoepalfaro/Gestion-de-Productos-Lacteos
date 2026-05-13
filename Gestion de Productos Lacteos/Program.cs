@@ -1,10 +1,15 @@
 using Gestion_de_Productos_Lacteos.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using SistemaInventarioLacteos.Services;
 //using Gestion_de_Productos_Lacteos.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddHostedService<VerificadorVencimientoService>();
+
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddDistributedMemoryCache();
 

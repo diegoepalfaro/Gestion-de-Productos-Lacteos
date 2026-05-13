@@ -1,0 +1,275 @@
+﻿@model Gestion_de_Productos_Lacteos.Models.Venta
+
+@{
+    ViewData["Title"] = "Punto de Venta";
+}
+
+<style>
+    .double-border-blue { border: 5px double #0d6efd !important; border-radius: 15px; background-color: #ffffff; }
+    .pos-container { background: #f8f9fa; border-radius: 15px; padding: 20px; }
+    .total-display { background: #0d6efd; color: white; border-radius: 10px; padding: 20px; text-align: center; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm pos-container">
+                <h5 class="fw-bold text-primary mb-3"><i class="fas fa-shopping-cart me-2"></i>Nueva Venta</h5>
+
+                <div class="input-group mb-4 shadow-sm">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-barcode text-primary"></i></span>
+                    <input type="text" id="txtBuscarLote" class="form-control border-start-0 ps-0" 
+                           placeholder="Escriba código de lote o producto..." list="listaSugerencias" autocomplete="off">
+                    <datalist id="listaSugerencias"></datalist>
+                </div>
+
+                <div class="table-responsive" style="min-height: 450px;">
+                    <table class="table table-hover align-middle" id="tablaCarrito">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Producto / Lote</th>
+                                <th class="text-center">Precio Unit.</th>
+                                <th class="text-center" width="120px">Cantidad</th>
+                                <th class="text-end">Subtotal</th>
+                                <th class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="total-display mb-4">
+                    <small class="d-block text-uppercase">Total a Cobrar</small>
+                    <h1 class="display-4 fw-bold mb-0">$<span id="lblTotal">0.00</span></h1>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Cliente</label>
+                    <div class="input-group">
+                        <select id="idCliente" class="form-select shadow-sm">
+                            <option value="1">Cliente General</option>
+                            @foreach (var c in ViewBag.Clientes)
+                            {
+                                    <option value="@c.IdCliente">@c.Nombre</option>
+                            }
+                        </select>
+                        <button class="btn btn-outline-primary" onclick="nuevoCliente()"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <button class="btn btn-success btn-lg w-100 shadow-sm py-3 fw-bold" onclick="finalizarVenta()">
+                    <i class="fas fa-check-circle me-2"></i> PROCESAR VENTA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content double-border-blue">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-primary">Nuevo Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCliente">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Completo</label>
+                        <input type="text" name="Nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" name="Telefono" class="form-control only-numbers">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Correo</label>
+                        <input type="email" name="Correo" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-4" onclick="guardarCliente()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+        <script>
+            let carrito = [];
+
+            // 1. Sugerencias en tiempo real
+            document.getElementById('txtBuscarLote').addEventListener('input', function(e) {
+                const busqueda = e.target.value;
+                if (busqueda.length < 2) return;
+
+                fetch(`/Ventas/SugerirLotes?term=${encodeURIComponent(busqueda)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const datalist = document.getElementById('listaSugerencias');
+                        datalist.innerHTML = '';
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.val;
+                            option.textContent = item.label;
+                            datalist.appendChild(option);
+                        });
+                    });
+            });
+
+            // 2. Selección de Lote
+            document.getElementById('txtBuscarLote').addEventListener('change', function(e) {
+                const codigo = e.target.value;
+                if (!codigo) return;
+
+                fetch(`/Ventas/BuscarPorLote?codigo=${encodeURIComponent(codigo)}`)
+                    .then(res => {
+                        if (!res.ok) throw new Error();
+                        return res.json();
+                    })
+                    .then(data => {
+                        agregarAlCarrito(data);
+                        e.target.value = ''; // Limpiar buscador
+                    })
+                    .catch(() => {
+                        if (codigo.length > 0) {
+                            Swal.fire('Aviso', 'Lote no encontrado o agotado', 'warning');
+                            e.target.value = '';
+                        }
+                    });
+            });
+
+            function agregarAlCarrito(producto) {
+                const existe = carrito.find(p => p.idLote === producto.idLote);
+                if (existe) {
+                    if (existe.cantidad + 1 <= producto.stock) {
+                        existe.cantidad++;
+                    } else {
+                        Swal.fire('Sin Stock', `Solo hay ${producto.stock} disponibles en este lote`, 'error');
+                    }
+                } else {
+                    carrito.push({
+                        idLote: producto.idLote,
+                        nombre: producto.nombre,
+                        precio: producto.precio, // PrecioFactura desde el controlador 
+                        cantidad: 1,
+                        stock: producto.stock,
+                        numeroLote: producto.numeroLote
+                    });
+                }
+                renderizarCarrito();
+            }
+
+            function renderizarCarrito() {
+                const tbody = document.querySelector('#tablaCarrito tbody');
+                tbody.innerHTML = '';
+                let total = 0;
+
+                carrito.forEach((item, index) => {
+                    const subtotal = item.precio * item.cantidad;
+                    total += subtotal;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <b>${item.nombre}</b><br>
+                                <small class="text-muted">Lote: ${item.numeroLote}</small>
+                            </td>
+                            <td class="text-center">$${item.precio.toFixed(2)}</td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm text-center" 
+                                       value="${item.cantidad}" min="1" max="${item.stock}"
+                                       onchange="actualizarCant(${index}, this.value)">
+                            </td>
+                            <td class="text-end fw-bold">$${subtotal.toFixed(2)}</td>
+                            <td class="text-center">
+                                <button class="btn btn-link text-danger p-0" onclick="eliminarItem(${index})">
+                                    <i class="fas fa-times-circle fa-lg"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                document.getElementById('lblTotal').innerText = total.toFixed(2);
+            }
+
+            function actualizarCant(index, val) {
+                const cant = parseInt(val);
+                if (isNaN(cant) || cant < 1) {
+                    carrito[index].cantidad = 1;
+                } else if (cant > carrito[index].stock) {
+                    Swal.fire('Error', `Stock disponible: ${carrito[index].stock}`, 'error');
+                    carrito[index].cantidad = carrito[index].stock;
+                } else {
+                    carrito[index].cantidad = cant;
+                }
+                renderizarCarrito();
+            }
+
+            function eliminarItem(index) {
+                carrito.splice(index, 1);
+                renderizarCarrito();
+            }
+
+            async function finalizarVenta() {
+                if (carrito.length === 0) return Swal.fire('Carrito Vacío', 'Agregue productos para continuar', 'info');
+
+                const payload = {
+                    IdCliente: parseInt(document.getElementById('idCliente').value),
+                    // Se mapean los campos para que coincidan con la clase VentaItemRequest del controlador 
+                    Items: carrito.map(i => ({
+                        idLote: i.idLote,
+                        numeroLote: i.numeroLote,
+                        cantidad: i.cantidad,
+                        precio: i.precio
+                    }))
+                };
+
+                try {
+                    const resp = await fetch('/Ventas/ProcesarVenta', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const res = await resp.json();
+                    if (res.success) {
+                        Swal.fire('¡Venta Exitosa!', 'La transacción se guardó y el stock fue actualizado.', 'success')
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Error Crítico', 'No se pudo procesar la venta en el servidor.', 'error');
+                }
+            }
+
+            function nuevoCliente() { new bootstrap.Modal(document.getElementById('modalCliente')).show(); }
+
+            function guardarCliente() {
+                const form = document.getElementById('formCliente');
+                if (!form.checkValidity()) { form.reportValidity(); return; }
+
+                fetch('/Clientes/Save', { method: 'POST', body: new FormData(form) })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire('Éxito', 'Cliente registrado', 'success').then(() => location.reload());
+                        } else {
+                            Swal.fire('Error', 'No se pudo guardar el cliente', 'error');
+                        }
+                    });
+            }
+
+            document.addEventListener('input', function (e) {
+                if (e.target.classList.contains('only-numbers')) {
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                }
+            });
+        </script>
+}

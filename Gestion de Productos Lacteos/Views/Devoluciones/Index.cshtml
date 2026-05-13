@@ -1,0 +1,232 @@
+﻿@{
+    ViewData["Title"] = "Gestión de Devoluciones";
+}
+
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 15px;">
+        <h4 class="fw-bold text-primary mb-4">
+            <i class="fas fa-undo-alt me-2"></i>Módulo de Devoluciones
+        </h4>
+
+        <div class="row mb-4">
+            <div class="col-md-5">
+                <label class="form-label fw-bold text-secondary">Número de Ticket / Venta</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-primary"></i></span>
+                    <input type="number" id="txtIdVenta" class="form-control" placeholder="Ingrese el ID de la venta...">
+                    <button class="btn btn-primary px-4 fw-bold" onclick="buscarVenta()">BUSCAR</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="alertaEstado" class="mb-4"></div>
+
+        <div id="seccionDevolucion" style="display: none;">
+            <div class="row bg-light p-3 rounded-3 mb-4 mx-0 shadow-sm border">
+                <div class="col-md-4">
+                    <small class="text-muted d-block text-uppercase fw-bold">Cliente</small>
+                    <span id="lblCliente" class="fw-bold fs-5 text-dark"></span>
+                </div>
+                <div class="col-md-4 text-center border-start border-end">
+                    <small class="text-muted d-block text-uppercase fw-bold">Fecha Original</small>
+                    <span id="lblFecha" class="fw-bold fs-5 text-dark"></span>
+                </div>
+                <div class="col-md-4 text-end">
+                    <small class="text-muted d-block text-uppercase fw-bold">Total Pagado</small>
+                    <span id="lblTotal" class="fw-bold fs-5 text-success"></span>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle border" id="tablaDetalle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Producto / Lote</th>
+                            <th class="text-center">Original</th>
+                            <th class="text-center">Devuelto</th>
+                            <th class="text-center">Disponible</th>
+                            <th class="text-center" width="150px">A Devolver ahora</th>
+                            <th class="text-end">Monto Reembolso</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="row mt-4 g-4">
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-white shadow-sm">
+                        <label class="form-label fw-bold text-primary"><i class="fas fa-comment-dots me-2"></i>Motivo del Reembolso</label>
+                        <textarea id="txtMotivo" class="form-control" rows="4" placeholder="Explique el motivo del cambio o devolución..."></textarea>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-white shadow-sm h-100">
+                        <label class="form-label fw-bold text-primary"><i class="fas fa-box-open me-2"></i>Estado Físico del Producto</label>
+                        <div class="d-grid gap-2">
+                            <input type="radio" class="btn-check" name="estado" id="radioBien" value="Buen Estado" checked autocomplete="off">
+                            <label class="btn btn-outline-success text-start p-3" for="radioBien">
+                                <i class="fas fa-check-circle me-2"></i> <b>BUEN ESTADO</b><br>
+                                <small>El producto volverá a sumarse al stock del lote para ser vendido de nuevo.</small>
+                            </label>
+
+                            <input type="radio" class="btn-check" name="estado" id="radioMal" value="Arruinado" autocomplete="off">
+                            <label class="btn btn-outline-danger text-start p-3" for="radioMal">
+                                <i class="fas fa-times-circle me-2"></i> <b>ARRUINADO / MERMA</b><br>
+                                <small>Se devuelve el dinero, pero el producto se descarta (no regresa al stock).</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4 border-0 bg-primary text-white shadow">
+                <div class="card-body d-flex justify-content-between align-items-center px-4">
+                    <h4 class="mb-0 fw-bold">TOTAL A REEMBOLSAR:</h4>
+                    <h2 class="mb-0 fw-bold">$<span id="lblReembolso">0.00</span></h2>
+                </div>
+            </div>
+
+            <div class="text-end mt-4">
+                <button id="btnProcesar" class="btn btn-success btn-lg px-5 py-3 shadow fw-bold" onclick="procesar()">
+                    <i class="fas fa-save me-2"></i> REGISTRAR DEVOLUCIÓN
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let itemsGlobal = [];
+
+        function buscarVenta() {
+            const id = document.getElementById('txtIdVenta').value;
+            if (!id) return;
+
+            fetch(`/Devoluciones/BuscarVenta?idVenta=${id}`)
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(data => {
+                    itemsGlobal = data.items;
+                    document.getElementById('lblCliente').innerText = data.cliente;
+                    document.getElementById('lblFecha').innerText = data.fecha;
+                    document.getElementById('lblTotal').innerText = `$${data.total.toFixed(2)}`;
+
+                    const tbody = document.querySelector('#tablaDetalle tbody');
+                    tbody.innerHTML = '';
+
+                    // Lógica del Indicador Global [cite: 15]
+                    const alertContainer = document.getElementById('alertaEstado');
+                    if (data.estaCompleta) {
+                        alertContainer.innerHTML = `
+                                    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert">
+                                        <i class="fas fa-ban fa-2x me-3"></i>
+                                        <div>
+                                            <h5 class="alert-heading fw-bold mb-0">VENTA TOTALMENTE DEVUELTA</h5>
+                                            <span>Esta factura ya no tiene productos disponibles para devolución.</span>
+                                        </div>
+                                    </div>`;
+                        document.getElementById('btnProcesar').disabled = true;
+                    } else {
+                        alertContainer.innerHTML = '';
+                        document.getElementById('btnProcesar').disabled = false;
+                    }
+
+                    data.items.forEach((item, i) => {
+                        const sinSaldo = item.cantidadDisponible <= 0;
+                        tbody.innerHTML += `
+                                    <tr class="${sinSaldo ? 'table-secondary text-muted' : ''}">
+                                        <td>
+                                            <b>${item.nombreProducto}</b>
+                                            ${sinSaldo ? '<i class="fas fa-check-circle text-success ms-2" title="Devuelto"></i>' : ''}
+                                            <br><small>Lote: ${item.numeroLote}</small>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-secondary">${item.cantidadOriginal}</span></td>
+                                        <td class="text-center"><span class="badge bg-info">${item.cantidadYaDevuelta}</span></td>
+                                        <td class="text-center fw-bold text-primary fs-5">${item.cantidadDisponible}</td>
+                                        <td>
+                                            <input type="number" class="form-control text-center fw-bold input-cant"
+                                                   value="0" min="0" max="${item.cantidadDisponible}"
+                                                   ${sinSaldo ? 'disabled' : ''}
+                                                   onchange="actualizarTotal()">
+                                        </td>
+                                        <td class="text-end fw-bold text-dark">$<span class="subtotal-item">0.00</span></td>
+                                    </tr>`;
+                    });
+                    document.getElementById('seccionDevolucion').style.display = 'block';
+                })
+                .catch(() => {
+                    Swal.fire('No encontrado', 'El número de ticket no existe en el sistema.', 'error');
+                    document.getElementById('seccionDevolucion').style.display = 'none';
+                });
+        }
+
+        function actualizarTotal() {
+            let totalGeneral = 0;
+            const filas = document.querySelectorAll('#tablaDetalle tbody tr');
+
+            filas.forEach((tr, i) => {
+                const input = tr.querySelector('.input-cant');
+                if (input && !input.disabled) {
+                    let cant = parseInt(input.value) || 0;
+
+                    // Validación de seguridad en el cliente
+                    if (cant > itemsGlobal[i].cantidadDisponible) {
+                        cant = itemsGlobal[i].cantidadDisponible;
+                        input.value = cant;
+                    }
+
+                    const subtotal = cant * itemsGlobal[i].precioVenta;
+                    tr.querySelector('.subtotal-item').innerText = subtotal.toFixed(2);
+                    totalGeneral += subtotal;
+                }
+            });
+            document.getElementById('lblReembolso').innerText = totalGeneral.toFixed(2);
+        }
+
+        async function procesar() {
+            const itemsADevolver = [];
+            document.querySelectorAll('#tablaDetalle tbody tr').forEach((tr, i) => {
+                const input = tr.querySelector('.input-cant');
+                if (input && !input.disabled) {
+                    const cant = parseInt(input.value) || 0;
+                    if (cant > 0) {
+                        itemsADevolver.push({
+                            idLote: itemsGlobal[i].idLote,
+                            cantidad: cant,
+                            precioUnitario: itemsGlobal[i].precioVenta
+                        });
+                    }
+                }
+            });
+
+            if (itemsADevolver.length === 0) {
+                return Swal.fire('Atención', 'Debe indicar al menos una cantidad mayor a cero.', 'warning');
+            }
+
+            if (!document.getElementById('txtMotivo').value.trim()) {
+                return Swal.fire('Campo requerido', 'Por favor escriba el motivo de la devolución.', 'warning');
+            }
+
+            const payload = {
+                IdVenta: parseInt(document.getElementById('txtIdVenta').value),
+                Motivo: document.getElementById('txtMotivo').value,
+                EstadoProducto: document.querySelector('input[name="estado"]:checked').value,
+                Items: itemsADevolver
+            };
+
+            const resp = await fetch('/Devoluciones/ProcesarDevolucion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const res = await resp.json();
+            if (res.success) {
+                Swal.fire('Procesado', res.message, 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', res.message, 'error');
+            }
+        }
+    </script>
+}

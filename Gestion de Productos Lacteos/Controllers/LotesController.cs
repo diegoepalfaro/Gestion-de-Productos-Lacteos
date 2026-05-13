@@ -20,14 +20,15 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             if (HttpContext.Session.GetString("UsuarioNombre") == null)
                 return RedirectToAction("Login", "Home");
 
-            var hoy = DateOnly.FromDateTime(DateTime.Now);
-            var query = _context.Lotes.Include(l => l.IdProductoNavigation).AsQueryable();
+            var hoy = DateTime.Today;
+            var query = _context.Lotes.Include(l => l.ProductoNavigation).AsQueryable();
 
-            // Filtro por Nombre de Producto o Número de Lote
+            // Filtro por Nombre de Producto, Número de Lote o Descripción del Lote
             if (!string.IsNullOrEmpty(buscar))
             {
-                query = query.Where(l => l.IdProductoNavigation.NombreProducto.Contains(buscar) ||
-                                         l.NumeroLote.Contains(buscar));
+                query = query.Where(l => l.ProductoNavigation.NombreProducto.Contains(buscar) ||
+                                         l.NumeroLote.Contains(buscar) ||
+                                         l.Descripcion.Contains(buscar));
             }
 
             // Filtro por Producto específico
@@ -82,9 +83,16 @@ namespace Gestion_de_Productos_Lacteos.Controllers
                 idLote = lote.IdLote,
                 idProducto = lote.IdProducto,
                 numeroLote = lote.NumeroLote,
+                descripcion = lote.Descripcion,
                 cantidad = lote.Cantidad,
                 fechaProduccion = lote.FechaProduccion?.ToString("yyyy-MM-dd"),
-                fechaVencimiento = lote.FechaVencimiento?.ToString("yyyy-MM-dd")
+                fechaVencimiento = lote.FechaVencimiento?.ToString("yyyy-MM-dd"),
+                // Nuevos campos de precios (Desglose IVA)
+                vtaNeta = lote.VtaNeta,
+                ivaConsumidor = lote.IvaConsumidor,
+                ccfSiva = lote.CcfSiva,
+                ivaContribuyente = lote.IvaContribuyente,
+                precioFactura = lote.PrecioFactura
             });
         }
 
@@ -122,7 +130,7 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             if (lote.Cantidad <= 0)
                 return Json(new { success = false, message = "El lote ya está agotado." });
 
-            lote.FechaVencimiento = DateOnly.FromDateTime(DateTime.Now.AddDays(-1));
+            lote.FechaVencimiento = DateTime.Today.AddDays(-1);
             _context.Update(lote);
             await _context.SaveChangesAsync();
 

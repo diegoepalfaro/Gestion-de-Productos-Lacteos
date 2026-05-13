@@ -1,0 +1,124 @@
+﻿@{
+    ViewData["Title"] = "Historial de Ventas";
+}
+
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 15px;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold text-primary mb-0"><i class="fas fa-history me-2"></i>Historial de Ventas</h4>
+            <div class="d-flex gap-2">
+                <input type="number" id="fId" class="form-control" placeholder="Buscar ID..." oninput="cargarVentas()">
+                <input type="date" id="fInicio" class="form-control" onchange="cargarVentas()">
+                <input type="date" id="fFin" class="form-control" onchange="cargarVentas()">
+            </div>
+        </div>
+
+        <table class="table table-hover align-middle border">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID Venta</th>
+                    <th>Fecha y Hora</th>
+                    <th>Cliente</th>
+                    <th>Vendedor</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyVentas"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalVerDevoluciones" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold">Devoluciones del Ticket #<span id="modalIdVenta"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="contenedorDevoluciones">
+                    <table class="table border">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cant.</th>
+                                <th>Motivo</th>
+                                <th>Estado</th>
+                                <th class="text-end">Reembolso</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyModalDev"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Establecer fechas del mes actual por defecto
+            const ahora = new Date();
+            const primerDia = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDia = ahora.toISOString().split('T')[0];
+            document.getElementById('fInicio').value = primerDia;
+            document.getElementById('fFin').value = ultimoDia;
+            cargarVentas();
+        });
+
+        function cargarVentas() {
+            const id = document.getElementById('fId').value;
+            const inicio = document.getElementById('fInicio').value;
+            const fin = document.getElementById('fFin').value;
+
+            fetch(`/Reportes/FiltrarVentas?id=${id}&inicio=${inicio}&fin=${fin}`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('tbodyVentas');
+                    tbody.innerHTML = '';
+                    data.forEach(v => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="fw-bold text-primary">#${v.idVenta}</td>
+                                <td>${v.fecha}</td>
+                                <td>${v.cliente}</td>
+                                <td>${v.vendedor}</td>
+                                <td class="text-end fw-bold">$${v.total.toFixed(2)}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-info" onclick="verDevoluciones(${v.idVenta})">
+                                        <i class="fas fa-eye me-1"></i> Ver Devoluciones
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                });
+        }
+
+        function verDevoluciones(id) {
+            document.getElementById('modalIdVenta').innerText = id;
+            fetch(`/Reportes/ObtenerDetalleDevoluciones?idVenta=${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('tbodyModalDev');
+                    tbody.innerHTML = '';
+                    if(data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay devoluciones registradas para esta venta.</td></tr>';
+                    } else {
+                        data.forEach(d => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${d.producto}</td>
+                                    <td class="text-center">${d.cantidad}</td>
+                                    <td>${d.motivo}</td>
+                                    <td><span class="badge ${d.estado === 'Buen Estado' ? 'bg-success' : 'bg-danger'}">${d.estado}</span></td>
+                                    <td class="text-end fw-bold">$${d.monto.toFixed(2)}</td>
+                                </tr>`;
+                        });
+                    }
+                    new bootstrap.Modal(document.getElementById('modalVerDevoluciones')).show();
+                });
+        }
+    </script>
+}
