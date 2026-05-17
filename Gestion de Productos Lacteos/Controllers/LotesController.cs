@@ -2,6 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Gestion_de_Productos_Lacteos.Controllers
 {
@@ -21,7 +25,11 @@ namespace Gestion_de_Productos_Lacteos.Controllers
                 return RedirectToAction("Login", "Home");
 
             var hoy = DateTime.Today;
-            var query = _context.Lotes.Include(l => l.ProductoNavigation).AsQueryable();
+            // Incluimos tanto el Producto como el Proveedor para las descripciones en la tabla
+            var query = _context.Lotes
+                .Include(l => l.ProductoNavigation)
+                .Include(l => l.IdProveedorNavigation)
+                .AsQueryable();
 
             // Filtro por Nombre de Producto, Número de Lote o Descripción del Lote
             if (!string.IsNullOrEmpty(buscar))
@@ -57,12 +65,19 @@ namespace Gestion_de_Productos_Lacteos.Controllers
 
             var lotes = await query.ToListAsync();
 
-            // CARGA DE PRODUCTOS: Solo los que están habilitados (Estado == true)
+            // CARGA DE PRODUCTOS ACTIVOS
             ViewBag.IdProducto = new SelectList(
                 _context.Productos.Where(p => p.Estado == true).OrderBy(p => p.NombreProducto),
                 "IdProducto",
                 "NombreProducto",
                 idProducto
+            );
+
+            // CARGA DE PROVEEDORES REGISTRADOS PARA EL MODAL
+            ViewBag.IdProveedor = new SelectList(
+                _context.Proveedors.OrderBy(p => p.NombreProveedor),
+                "IdProveedor",
+                "NombreProveedor"
             );
 
             ViewBag.BuscarActual = buscar;
@@ -87,12 +102,15 @@ namespace Gestion_de_Productos_Lacteos.Controllers
                 cantidad = lote.Cantidad,
                 fechaProduccion = lote.FechaProduccion?.ToString("yyyy-MM-dd"),
                 fechaVencimiento = lote.FechaVencimiento?.ToString("yyyy-MM-dd"),
-                // Nuevos campos de precios (Desglose IVA)
                 vtaNeta = lote.VtaNeta,
                 ivaConsumidor = lote.IvaConsumidor,
                 ccfSiva = lote.CcfSiva,
                 ivaContribuyente = lote.IvaContribuyente,
-                precioFactura = lote.PrecioFactura
+                precioFactura = lote.PrecioFactura,
+                // Nuevos campos mapeados en JSON
+                idProveedor = lote.IdProveedor,
+                fechaIngreso = lote.FechaIngreso?.ToString("yyyy-MM-dd"),
+                costoCompra = lote.CostoCompra
             });
         }
 
@@ -102,12 +120,27 @@ namespace Gestion_de_Productos_Lacteos.Controllers
         {
             try
             {
+                // AUDITORÍA: Guardamos la fecha y hora exacta de cualquier interacción
+                lote.UltimaModificacion = DateTime.Now;
+
                 if (lote.IdLote == 0)
                 {
+                    // Si es nuevo y no se seleccionó fecha, se asienta la fecha actual
+                    if (lote.FechaIngreso == null)
+                    {
+                        lote.FechaIngreso = DateTime.Now;
+                    }
                     _context.Add(lote);
                 }
                 else
                 {
+                    // Si editamos, recuperamos la fecha de ingreso original para que no se sobreescriba en nulo
+                    var loteExistente = await _context.Lotes.AsNoTracking().FirstOrDefaultAsync(l => l.IdLote == lote.IdLote);
+                    if (loteExistente != null && lote.FechaIngreso == null)
+                    {
+                        lote.FechaIngreso = loteExistente.FechaIngreso;
+                    }
+
                     _context.Update(lote);
                 }
 
@@ -126,11 +159,14 @@ namespace Gestion_de_Productos_Lacteos.Controllers
             var lote = await _context.Lotes.FindAsync(id);
             if (lote == null) return Json(new { success = false, message = "Lote no encontrado." });
 
-            // Validación extra: Si ya no hay stock, no tiene sentido marcarlo como vencido
             if (lote.Cantidad <= 0)
                 return Json(new { success = false, message = "El lote ya está agotado." });
 
             lote.FechaVencimiento = DateTime.Today.AddDays(-1);
+
+            // AUDITORÍA: El cambio manual de estado también cuenta como modificación
+            lote.UltimaModificacion = DateTime.Now;
+
             _context.Update(lote);
             await _context.SaveChangesAsync();
 

@@ -17,7 +17,7 @@ namespace SistemaInventarioLacteos.Services
         private readonly EmailSettings _emailSettings;
 
         // Configura aquí la hora a la que quieres que se envíe el correo (0-23)
-        private const int HORA_ENVIO = 11;
+        private const int HORA_ENVIO = 17;
 
         public VerificadorVencimientoService(
             ILogger<VerificadorVencimientoService> logger,

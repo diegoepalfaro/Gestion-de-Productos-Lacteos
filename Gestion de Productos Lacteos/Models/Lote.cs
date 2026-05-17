@@ -38,8 +38,24 @@ public partial class Lote
     [Column(TypeName = "decimal(10, 4)")]
     public decimal PrecioFactura { get; set; }
 
+    [Column("idProveedor")]
+    public int? IdProveedor { get; set; }
+
+    [Column("fechaIngreso")]
+    public DateTime? FechaIngreso { get; set; }
+
+    [Column("costoCompra", TypeName = "decimal(10, 4)")]
+    public decimal? CostoCompra { get; set; }
+
+    [Column("ultimaModificacion")]
+    public DateTime? UltimaModificacion { get; set; }
+    // ---------------------------------------------------
+
     [ForeignKey("IdProducto")]
     public virtual Producto? ProductoNavigation { get; set; }
+
+    [ForeignKey("IdProveedor")]
+    public virtual Proveedor? IdProveedorNavigation { get; set; }
 
     public virtual ICollection<AlertasVencimiento> AlertasVencimientos { get; set; } = new List<AlertasVencimiento>();
 

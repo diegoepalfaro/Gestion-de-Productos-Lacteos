@@ -26,7 +26,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-0 fw-bold"><i class="fas fa-layer-group text-primary me-2"></i>Control de Lotes</h4>
-            <small class="text-muted">Gestión de existencias, precios y trazabilidad</small>
+            <small class="text-muted">Gestión de existencias, precios y trazabilidad de auditoría</small>
         </div>
         <button onclick="abrirModal(0)" class="btn btn-primary shadow-sm">
             <i class="fas fa-plus-circle me-1"></i> Nuevo Lote
@@ -76,23 +76,31 @@
                         <tr>
                             <th class="ps-4 text-start">Producto</th>
                             <th>N° Lote</th>
-                            <th>Descripción</th>
+                            <th>Proveedor</th>
+                            <th>F. Ingreso</th>
+                            <th>Stock</th>
                             <th>PVP (Factura)</th>
                             <th>Vencimiento</th>
-                            <th>Stock</th>
                             <th>Estado</th>
+                            <th>Última Modif.</th>
                             <th class="pe-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @if (!Model.Any())
                         {
-                            <tr><td colspan="8" class="text-center py-5 text-muted">No se encontraron lotes registrados.</td></tr>
+                            <tr><td colspan="10" class="text-center py-5 text-muted">No se encontraron lotes registrados.</td></tr>
                         }
                         @foreach (var item in Model)
                         {
                             var esInactivo = item.ProductoNavigation?.Estado == false;
-                            <tr class="@(esInactivo ? "producto-deshabilitado" : "")">
+                            var hoy = DateTime.Today;
+                            var dias = item.FechaVencimiento.HasValue ? (item.FechaVencimiento.Value.Date - hoy).Days : 0;
+
+                            string claseFila = "";
+                            if (esInactivo) claseFila = "producto-deshabilitado";
+
+                            <tr class="@claseFila">
                                 <td class="ps-4 text-start">
                                     <span class="fw-bold">@item.ProductoNavigation?.NombreProducto</span>
                                     @if (esInactivo)
@@ -101,22 +109,16 @@
                                     }
                                 </td>
                                 <td><span class="badge bg-light text-primary border">@item.NumeroLote</span></td>
-                                <td>
-                                    <small class="text-muted">@(string.IsNullOrEmpty(item.Descripcion) ? "-" : item.Descripcion)</small>
-                                </td>
-                                <td>
-                                    <span class="fw-bold text-success">$@item.PrecioFactura.ToString("0.00")</span>
-                                </td>
-                                <td class="small">@item.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
+                                <td><small class="fw-semibold text-secondary">@(item.IdProveedorNavigation?.NombreProveedor ?? "Sin Asignar")</small></td>
+                                <td class="small">@item.FechaIngreso?.ToString("dd/MM/yyyy")</td>
                                 <td>
                                     <span class="fw-bold @(item.Cantidad == 0 ? "text-danger" : "")">@item.Cantidad</span>
                                 </td>
                                 <td>
-                                    @{
-                                        // CORRECCIÓN DE FECHAS: Se usa DateTime en lugar de DateOnly para coincidir con SQL
-                                        var hoy = DateTime.Today;
-                                        var dias = item.FechaVencimiento.HasValue ? (item.FechaVencimiento.Value.Date - hoy).Days : 0;
-                                    }
+                                    <span class="fw-bold text-success">$@item.PrecioFactura.ToString("N2")</span>
+                                </td>
+                                <td class="small">@item.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
+                                <td>
                                     @if (item.Cantidad <= 0)
                                     {
                                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2">AGOTADO</span>
@@ -133,6 +135,11 @@
                                     {
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success px-2">@dias días</span>
                                     }
+                                </td>
+                                <td>
+                                    <small class="text-muted" style="font-size: 11px;">
+                                        @(item.UltimaModificacion?.ToString("dd/MM/yyyy hh:mm tt") ?? "Original")
+                                    </small>
                                 </td>
                                 <td class="pe-4">
                                     <button onclick="abrirModal(@item.IdLote)" class="btn btn-sm btn-outline-primary border-0"><i class="fas fa-edit"></i></button>
@@ -201,6 +208,24 @@
                         </div>
                     </div>
 
+                    <h6 class="text-primary fw-bold mt-3 border-bottom pb-2"><i class="fas fa-shield-alt me-2"></i>Auditoría de Entrada y Costos</h6>
+                    <div class="row bg-light p-3 rounded mb-3 border">
+                        <div class="col-md-5 mb-2">
+                            <label class="form-label small fw-bold text-primary">Proveedor Relacionado</label>
+                            <select id="IdProveedor" name="IdProveedor" class="form-select" asp-items="ViewBag.IdProveedor">
+                                <option value="">-- Seleccionar Proveedor de Catálogo --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small fw-bold text-primary">Fecha de Ingreso</label>
+                            <input type="date" id="FechaIngreso" name="FechaIngreso" class="form-control" />
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label small fw-bold text-primary">Costo de Compra ($)</label>
+                            <input type="number" id="CostoCompra" name="CostoCompra" class="form-control" step="0.0001" placeholder="Ej: 0.6500" />
+                        </div>
+                    </div>
+
                     <h6 class="text-primary fw-bold mt-3 border-bottom pb-2"><i class="fas fa-file-invoice-dollar me-2"></i>Desglose de Precios (IVA 13%)</h6>
                     <div class="row bg-light p-3 rounded mb-3 border">
                         <div class="col-md-4 mb-2">
@@ -248,36 +273,32 @@
 
         // --- Lógica del Cálculo de IVA ---
         document.getElementById('VtaNeta').addEventListener('input', calcularPrecios);
-
         function calcularPrecios() {
             let vtaNeta = parseFloat(document.getElementById('VtaNeta').value) || 0;
-
-            // Cálculos para Consumidor Final (13%)
             let iva = vtaNeta * 0.13;
             let totalConsumidor = vtaNeta + iva;
 
             document.getElementById('IvaConsumidor').value = iva.toFixed(4);
-
-            // El precio de consumidor suele ser la base para el crédito fiscal (CCF)
             document.getElementById('CcfSiva').value = totalConsumidor.toFixed(4);
 
-            // Cálculos para Contribuyente sobre la nueva base
             let ivaCCF = totalConsumidor * 0.13;
             document.getElementById('IvaContribuyente').value = ivaCCF.toFixed(4);
 
-            // Gran Total Sugerido
             let precioFactura = totalConsumidor + ivaCCF;
             document.getElementById('PrecioFactura').value = precioFactura.toFixed(4);
         }
 
         // --- Modales y CRUD ---
         const modalLote = new bootstrap.Modal(document.getElementById('modalLote'));
+
         function abrirModal(id) {
             document.getElementById('formLote').reset();
             document.getElementById('IdLote').value = id;
 
             if (id === 0) {
                 document.getElementById('tituloModal').querySelector('span').innerText = "Nuevo Lote";
+                // Asignar por defecto la fecha de hoy al crear uno nuevo
+                document.getElementById('FechaIngreso').value = new Date().toISOString().split('T')[0];
                 modalLote.show();
             } else {
                 document.getElementById('tituloModal').querySelector('span').innerText = "Editar Lote";
@@ -288,6 +309,11 @@
                     document.getElementById('Cantidad').value = data.cantidad;
                     document.getElementById('FechaProduccion').value = data.fechaProduccion;
                     document.getElementById('FechaVencimiento').value = data.fechaVencimiento;
+
+                    // Asignación de los nuevos campos de auditoría
+                    document.getElementById('IdProveedor').value = data.idProveedor || '';
+                    document.getElementById('FechaIngreso').value = data.fechaIngreso;
+                    document.getElementById('CostoCompra').value = data.costoCompra;
 
                     // Cargar Precios
                     document.getElementById('VtaNeta').value = data.vtaNeta;
