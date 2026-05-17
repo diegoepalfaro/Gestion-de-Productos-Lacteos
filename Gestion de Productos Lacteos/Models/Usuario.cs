@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema; 
 
 namespace Gestion_de_Productos_Lacteos.Models;
 
@@ -19,6 +20,7 @@ public partial class Usuario
 
     public bool? Estado { get; set; }
 
+    [ForeignKey("IdRol")]
     public virtual Rol? IdRolNavigation { get; set; }
 
     public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();

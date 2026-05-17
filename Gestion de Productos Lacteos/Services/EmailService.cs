@@ -1,7 +1,10 @@
-﻿using System.Net;
-using System.Net.Mail;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Gestion_de_Productos_Lacteos.Models;
+using MimeKit;
+using MailKit.Net.Smtp;
 
 namespace SistemaInventarioLacteos.Services
 {
@@ -14,64 +17,58 @@ namespace SistemaInventarioLacteos.Services
             _emailSettings = emailSettings.Value;
         }
 
-        public async Task EnviarComprobanteVentaAsync(string correoCliente, string correoVendedor, Venta venta, List<DetalleVenta> detalles, string nombreCliente)
+        public async Task EnviarComprobanteVentaAsync(string correoCliente, string correoVendedor, Venta venta, List<DetalleVenta> detalles, string nombreCliente, byte[] pdfData)
         {
             try
             {
-                using var client = new SmtpClient(_emailSettings.Host, _emailSettings.Port);
-                client.EnableSsl = true;
-                client.Credentials = new NetworkCredential(_emailSettings.From, _emailSettings.Password);
+                var message = new MimeMessage();
 
-                // Construcción de las filas de la tabla con navegación a Lote y Producto
-                var filasDetalle = detalles.Select(d => $@"
-                    <tr>
-                        <td style='border: 1px solid #ddd; padding: 8px;'>{d.Cantidad}</td>
-                        <td style='border: 1px solid #ddd; padding: 8px;'>
-                            {d.LoteNavigation?.ProductoNavigation?.NombreProducto ?? "Producto"} 
-                            <br><small style='color: #666;'>Lote: {d.LoteNavigation?.NumeroLote ?? "N/A"}</small>
-                        </td>
-                        <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>${d.Subtotal:N2}</td>
-                    </tr>");
+                // Emisor: El correo institucional configurado en tu appsettings
+                message.From.Add(new MailboxAddress("Sistema de Inventario Lácteos", _emailSettings.From));
 
-                var body = $@"
-                <html>
-                <body style='font-family: Arial, sans-serif;'>
-                    <div style='max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px;'>
-                        <h2 style='color: #0d6efd; text-align: center;'>Comprobante de Venta #{venta.IdVenta}</h2>
-                        <p>Estimado/a <b>{nombreCliente}</b>, gracias por su compra.</p>
-                        <hr>
-                        <p><b>Fecha:</b> {venta.FechaVenta:dd/MM/yyyy HH:mm}</p>
-                        <table style='width: 100%; border-collapse: collapse;'>
-                            <thead>
-                                <tr style='background: #f8f9fa;'>
-                                    <th style='border: 1px solid #ddd; padding: 8px;'>Cant.</th>
-                                    <th style='border: 1px solid #ddd; padding: 8px;'>Producto</th>
-                                    <th style='border: 1px solid #ddd; padding: 8px;'>Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {string.Join("", filasDetalle)}
-                            </tbody>
-                        </table>
-                        <h3 style='text-align: right;'>TOTAL: ${venta.Total:N2}</h3>
-                    </div>
-                </body>
-                </html>";
-
-                var mailMessage = new MailMessage
+                // Destinatario principal: El Cliente
+                if (!string.IsNullOrEmpty(correoCliente))
                 {
-                    From = new MailAddress(_emailSettings.From, "Sistema Lácteos - Ventas"),
-                    Subject = $"Ticket de Venta #{venta.IdVenta} - Lácteos",
-                    Body = body,
-                    IsBodyHtml = true
+                    message.To.Add(new MailboxAddress(nombreCliente, correoCliente));
+                }
+
+                // Con Copia (Cc): El Cobrador logueado
+                if (!string.IsNullOrEmpty(correoVendedor))
+                {
+                    message.Cc.Add(new MailboxAddress("Respaldo de Caja / Cobrador", correoVendedor));
+                }
+
+                message.Subject = $"Comprobante de Venta Electrónico - Ticket #{venta.IdVenta}";
+
+                var bodyBuilder = new BodyBuilder
+                {
+                    HtmlBody = $@"
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #0d6efd; border-radius: 10px;'>
+                        <h2 style='color: #0d6efd; text-align: center;'>¡Gracias por tu compra!</h2>
+                        <p>Estimado/a <b>{nombreCliente}</b>,</p>
+                        <p>Adjunto a este correo compartimos el comprobante digital en formato PDF correspondiente a su compra con el número de Ticket <b>#{venta.IdVenta}</b>.</p>
+                        <p>Monto Total Procesado: <b>${venta.Total:N2}</b></p>
+                        <hr style='border: 0; border-top: 1px solid #ddd;'>
+                        <p style='font-size: 11px; color: #666; text-align: center;'>Este es un correo automático emitido por el control de facturación. Por favor no lo responda.</p>
+                    </div>"
                 };
 
-                if (!string.IsNullOrEmpty(correoCliente)) mailMessage.To.Add(correoCliente);
-                if (!string.IsNullOrEmpty(correoVendedor)) mailMessage.CC.Add(correoVendedor);
+                // Adjuntar el PDF generado en memoria
+                bodyBuilder.Attachments.Add($"Ticket_{venta.IdVenta}.pdf", pdfData, new ContentType("application", "pdf"));
+                message.Body = bodyBuilder.ToMessageBody();
 
-                await client.SendMailAsync(mailMessage);
+                using (var client = new MailKit.Net.Smtp.SmtpClient())
+                {
+                    await client.ConnectAsync(_emailSettings.Host, _emailSettings.Port, MailKit.Security.SecureSocketOptions.StartTls);
+                    await client.AuthenticateAsync(_emailSettings.From, _emailSettings.Password);
+                    await client.SendAsync(message);
+                    await client.DisconnectAsync(true);
+                }
             }
-            catch (Exception) { /* Loguear error pero no detener la venta */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error enviando comprobante por correo: " + ex.Message);
+            }
         }
     }
 }
